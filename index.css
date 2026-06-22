@@ -748,6 +748,7 @@ h1, h2, h3, .logo, .counter-value {
     opacity: 0;
     transform: translateY(100%);
     pointer-events: none;
+    visibility: hidden;
 }
 
 .workout-overlay-header {
@@ -842,6 +843,7 @@ h1, h2, h3, .logo, .counter-value {
 .modal.hidden {
     opacity: 0;
     pointer-events: none;
+    visibility: hidden;
 }
 
 .modal-content {
