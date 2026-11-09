@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Saitama Workout</title>
+    <title>Saitama Workout - AI Pose Skeleton Fitness</title>
     
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -13,6 +13,11 @@
     <link rel="stylesheet" href="index.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0F0F12">
+
+    <!-- Google MediaPipe Pose CDN for Real-time Skeleton Tracking -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -20,7 +25,7 @@
     <div id="app">
         <!-- Top Navigation -->
         <header class="app-header">
-            <h1 class="logo">Saitama Workout</h1>
+            <h1 class="logo"><i class="fa-solid fa-bolt"></i> Saitama AI</h1>
             <div class="header-controls">
                 <button id="lang-toggle" class="btn-icon">VI</button>
                 <div id="sync-indicator" class="sync-badge pending" title="Sync Status">
@@ -36,6 +41,25 @@
                 <div class="greeting-container">
                     <h2 id="home-title" class="home-title">Chào Anh Hùng!</h2>
                     <p id="home-sub" class="home-sub">Hôm nay bạn đã sẵn sàng vượt qua giới hạn chưa?</p>
+                </div>
+
+                <!-- AI Camera Featured Banner -->
+                <div class="ai-hero-card">
+                    <div class="ai-hero-badge">
+                        <span class="pulse-dot"></span> <span data-i18n="ai_badge">AI POSE SKELETON</span>
+                    </div>
+                    <h3 class="ai-hero-title" data-i18n="ai_hero_title">Đếm Bằng Khung Xương AI</h3>
+                    <p class="ai-hero-desc" data-i18n="ai_hero_desc">Mở camera để AI tự vẽ khung xương, kiểm tra góc gập và đếm số rep tự động!</p>
+                    <div class="ai-hero-actions">
+                        <button class="btn btn-ai-action" onclick="openAiWorkout('AI_SQUAT')">
+                            <i class="fa-solid fa-person-arrow-down-to-line"></i>
+                            <span>Squat AI</span>
+                        </button>
+                        <button class="btn btn-ai-action" onclick="openAiWorkout('AI_BICEP_CURL')">
+                            <i class="fa-solid fa-dumbbell"></i>
+                            <span>Gập tạ tay AI</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Streak Card -->
@@ -56,7 +80,7 @@
                         <i class="fa-solid fa-play"></i> <span data-i18n="quick_start">Bắt đầu nhanh</span>
                     </button>
                     <button id="btn-saitama-challenge" class="btn btn-outlined">
-                        <i class="fa-solid fa-dumbbell"></i> <span data-i18n="btn_set_automatic">Thử thách Saitama</span>
+                        <i class="fa-solid fa-fire-flame-curved"></i> <span data-i18n="btn_set_automatic">Thử thách Saitama</span>
                     </button>
                 </div>
 
@@ -74,26 +98,51 @@
 
             <!-- Workout List Screen -->
             <section id="tab-workout" class="tab-panel">
+                <div class="section-title-wrap">
+                    <h2 class="category-heading"><i class="fa-solid fa-robot"></i> <span data-i18n="category_ai">Bài Tập AI Camera (Khung Xương)</span></h2>
+                </div>
+                <div class="exercises-grid ai-featured-grid">
+                    <div class="exercise-card ai-special-card" onclick="openAiWorkout('AI_SQUAT')">
+                        <div class="ai-tag"><i class="fa-solid fa-camera"></i> AI SKELETON</div>
+                        <div class="card-icon ai-glow-icon"><i class="fa-solid fa-person-arrow-down-to-line"></i></div>
+                        <div class="card-details">
+                            <h3 data-i18n="ex_ai_squat">Đứng lên ngồi xuống (Squat AI)</h3>
+                            <span data-i18n="ai_squat_hint">Đo góc khớp háng - đầu gối - cổ chân</span>
+                        </div>
+                    </div>
+                    <div class="exercise-card ai-special-card" onclick="openAiWorkout('AI_BICEP_CURL')">
+                        <div class="ai-tag"><i class="fa-solid fa-camera"></i> AI SKELETON</div>
+                        <div class="card-icon ai-glow-icon"><i class="fa-solid fa-dumbbell"></i></div>
+                        <div class="card-details">
+                            <h3 data-i18n="ex_ai_bicep_curl">Gập tạ tay (Bicep Curl AI)</h3>
+                            <span data-i18n="ai_curl_hint">Đo góc khuỷu tay trái, phải hoặc 2 tay</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title-wrap" style="margin-top: 10px;">
+                    <h2 class="category-heading"><i class="fa-solid fa-mobile-screen-button"></i> <span data-i18n="category_sensor">Bài Tập Cảm Biến Bỏ Túi</span></h2>
+                </div>
                 <div class="exercises-grid">
                     <div class="exercise-card" data-exercise="SQUAT">
                         <div class="card-icon"><i class="fa-solid fa-child"></i></div>
                         <div class="card-details">
-                            <h3 data-i18n="ex_squat">Đứng lên ngồi xuống</h3>
-                            <span data-i18n="type_reps">Đếm số lần</span>
+                            <h3 data-i18n="ex_squat">Squat cảm biến</h3>
+                            <span data-i18n="type_reps">Cảm biến gia tốc</span>
                         </div>
                     </div>
                     <div class="exercise-card" data-exercise="CRUNCH">
                         <div class="card-icon"><i class="fa-solid fa-align-center"></i></div>
                         <div class="card-details">
                             <h3 data-i18n="ex_crunch">Gập bụng</h3>
-                            <span data-i18n="type_reps">Đếm số lần</span>
+                            <span data-i18n="type_reps">Cảm biến gia tốc</span>
                         </div>
                     </div>
                     <div class="exercise-card" data-exercise="PUSH_UP">
                         <div class="card-icon"><i class="fa-solid fa-person-running"></i></div>
                         <div class="card-details">
                             <h3 data-i18n="ex_pushup">Chống đẩy</h3>
-                            <span data-i18n="type_reps">Đếm số lần</span>
+                            <span data-i18n="type_reps">Cảm biến gia tốc</span>
                         </div>
                     </div>
                     <div class="exercise-card" data-exercise="RUNNING">
@@ -107,7 +156,7 @@
                         <div class="card-icon"><i class="fa-solid fa-hand-holding-hand"></i></div>
                         <div class="card-details">
                             <h3 data-i18n="ex_pullup">Lên xà</h3>
-                            <span data-i18n="type_reps">Đếm số lần</span>
+                            <span data-i18n="type_reps">Cảm biến gia tốc</span>
                         </div>
                     </div>
                     <div class="exercise-card" data-exercise="PLANK">
@@ -196,7 +245,104 @@
         </nav>
     </div>
 
-    <!-- Active Workout Mode overlay -->
+    <!-- ============================================================== -->
+    <!-- AI CAMERA SKELETON WORKOUT OVERLAY (Full-Screen Live HUD)      -->
+    <!-- ============================================================== -->
+    <div id="ai-workout-overlay" class="ai-workout-overlay hidden">
+        <!-- Hidden video element feeding frames to MediaPipe -->
+        <video id="ai-video" playsinline webkit-playsinline muted style="display: none;"></video>
+
+        <!-- Main Canvas rendering Video + Glowing Skeleton + Angle Arcs -->
+        <canvas id="ai-canvas" class="ai-canvas"></canvas>
+
+        <!-- Top Controls HUD -->
+        <div class="ai-top-hud">
+            <button id="btn-ai-back" class="ai-hud-btn" title="Thoát"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="ai-exercise-selector-pill">
+                <button id="ai-select-squat" class="pill-btn active" onclick="switchAiExercise('AI_SQUAT')">
+                    <i class="fa-solid fa-person-arrow-down-to-line"></i> Squat
+                </button>
+                <button id="ai-select-curl" class="pill-btn" onclick="switchAiExercise('AI_BICEP_CURL')">
+                    <i class="fa-solid fa-dumbbell"></i> Gập tạ
+                </button>
+            </div>
+            <div class="ai-hud-actions">
+                <button id="btn-ai-switch-camera" class="ai-hud-btn" title="Đổi camera"><i class="fa-solid fa-camera-rotate"></i></button>
+                <button id="btn-ai-voice" class="ai-hud-btn active" title="Bật/Tắt giọng đọc số"><i class="fa-solid fa-volume-high"></i></button>
+            </div>
+        </div>
+
+        <!-- Arm Mode Selector (Only shown for Bicep Curl) -->
+        <div id="ai-arm-selector" class="ai-arm-selector hidden">
+            <span class="arm-label"><i class="fa-solid fa-hand-fist"></i> Chọn tay:</span>
+            <button class="arm-btn active" data-arm="BOTH">2 Tay</button>
+            <button class="arm-btn" data-arm="RIGHT">Tay Phải</button>
+            <button class="arm-btn" data-arm="LEFT">Tay Trái</button>
+        </div>
+
+        <!-- Center HUD Overlay (Rep count, angle gauge, feedback pill) -->
+        <div class="ai-center-hud">
+            <!-- Large floating rep counter -->
+            <div class="ai-rep-display">
+                <div id="ai-rep-counter" class="ai-rep-number">0</div>
+                <div class="ai-rep-unit" data-i18n="stat_reps">REPS</div>
+            </div>
+
+            <!-- Form Feedback Pill -->
+            <div id="ai-feedback-pill" class="ai-feedback-pill ready">
+                <i class="fa-solid fa-crosshairs"></i>
+                <span id="ai-feedback-text">Đang nhận diện cơ thể...</span>
+            </div>
+
+            <!-- Angle & Motion Gauge -->
+            <div class="ai-gauge-wrapper">
+                <div class="gauge-labels">
+                    <span id="ai-gauge-joint-name">Khớp gối</span>
+                    <span id="ai-current-angle">175°</span>
+                </div>
+                <div class="ai-gauge-track">
+                    <div id="ai-gauge-fill" class="ai-gauge-fill" style="width: 0%;"></div>
+                    <div id="ai-gauge-target-marker" class="ai-gauge-target-marker" style="left: 80%;"></div>
+                </div>
+                <div class="gauge-target-label">
+                    <span id="ai-stage-badge" class="ai-stage-badge">UP</span>
+                    <span id="ai-target-rule">Mục tiêu: &lt; 90° để đạt rep</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Workout Stats & Actions -->
+        <div class="ai-bottom-hud">
+            <div class="ai-stats-bar">
+                <div class="ai-stat-box">
+                    <span class="stat-lbl" data-i18n="stat_duration">Thời gian</span>
+                    <span id="ai-duration" class="stat-val">00:00</span>
+                </div>
+                <div class="ai-stat-box">
+                    <span class="stat-lbl" data-i18n="stat_calories">Calo</span>
+                    <span id="ai-calories" class="stat-val">0 kcal</span>
+                </div>
+                <div class="ai-stat-box">
+                    <span class="stat-lbl">Chuẩn Form</span>
+                    <span id="ai-form-accuracy" class="stat-val">100%</span>
+                </div>
+            </div>
+
+            <div class="ai-actions-row">
+                <button id="btn-ai-pause" class="btn btn-outlined-light"><i class="fa-solid fa-pause"></i> Tạm dừng</button>
+                <button id="btn-ai-finish" class="btn btn-primary"><i class="fa-solid fa-flag-checkered"></i> Hoàn thành</button>
+            </div>
+        </div>
+
+        <!-- Loading spinner while camera & MediaPipe initialize -->
+        <div id="ai-loading-overlay" class="ai-loading-overlay">
+            <div class="ai-spinner"></div>
+            <p id="ai-loading-msg">Đang khởi tạo AI Khung Xương...</p>
+            <span class="ai-loading-sub">Vui lòng cấp quyền truy cập Camera</span>
+        </div>
+    </div>
+
+    <!-- Active Sensor Workout Mode overlay (Old Accelerometer mode) -->
     <div id="workout-overlay" class="workout-overlay hidden">
         <header class="workout-overlay-header">
             <h2 id="overlay-exercise-name">Đang tập</h2>

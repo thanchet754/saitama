@@ -1,55 +1,44 @@
-# Saitama Workout - PWA Fitness Tracker
+# Saitama AI Workout - Web App Đếm Khung Xương (AI Pose Skeleton)
 
-A Progressive Web App (PWA) that counts exercise repetitions and tracks workout duration using mobile browser motion sensors and GPS geolocation. Designed with a vibrant dark-mode fitness aesthetic, it supports bilingual localization (Vietnamese and English) and automatically synchronizes workout sessions to a Supabase backend.
+Ứng dụng Web PWA hỗ trợ đếm số lần và thời gian tập luyện tự động bằng **AI nhận diện khung xương thời gian thực qua Camera (Google MediaPipe Pose)** và cảm biến gia tốc / GPS.
 
-## Features
+---
 
-- **Automatic Rep Counting**: Leverages browser `DeviceMotionEvent` (accelerometer magnitude calculation with low-pass filters) to count repetitions for Squats, Crunches, Push-ups, and Pull-ups.
-- **GPS Running Tracker**: Uses `navigator.geolocation` to monitor running distance, speed, and average pace.
-- **Offline First**: Utilizes LocalStorage for offline data caching and Service Worker (`sw.js`) for instant loading without network.
-- **Supabase Auto-Sync**: Instantly pushes completed workouts and daily targets to Supabase tables when network is connected.
-- **Daily Goals**: Setup daily exercise targets manually or trigger the ultimate **Saitama Challenge** (100 squats, 100 crunches, 100 push-ups, 10km run, 50 pull-ups, and 5-min plank).
-- **Personal Records (PR)**: Tracks your highest achievements across all exercise types.
-- **Vibrant Chart**: Dynamic HTML5 Canvas bar chart summarizing weekly calories burned.
+## 🌟 Tính Năng Mới: AI Camera Khung Xương (Skeleton Tracking)
 
-## Files
+### 1. 🏋️‍♂️ Đếm Squat (Đứng lên ngồi xuống)
+- **Cơ chế**: AI nhận diện các khớp mốc cơ thể: Hông (Hip) - Đầu gối (Knee) - Cổ chân (Ankle).
+- **Tính toán góc**: Tự động đo góc gập của khớp đầu gối (`Knee Angle`) theo thời gian thực và vẽ trực tiếp số đo góc ngay trên khớp gối.
+- **Quy chuẩn Rep**:
+  - Đứng thẳng: góc > 160° (`UP`)
+  - Ngồi xổm chuẩn sâu: góc <= 95° (`DOWN`)
+  - Chuyển từ `UP` -> `DOWN` -> đứng thẳng `UP`: **Tự động tăng +1 Rep!**
+- **Form Feedback**: Cảnh báo tức thì nếu ngồi chưa đủ sâu hoặc đứng chưa thẳng người.
 
-- `index.html` - App interface markup and templates.
-- `index.css` - Custom styling tokens, layouts, and animations.
-- `app.js` - Sensors processor, local storage caching, translation keys, and Supabase integration.
-- `manifest.json` - PWA configuration.
-- `sw.js` - Offline caching logic.
+### 2. 💪 Đếm Gập Tạ Tay (Bicep Curl)
+- **Cơ chế**: AI nhận diện các khớp mốc cơ thể: Vai (Shoulder) - Khuỷu tay (Elbow) - Cổ tay (Wrist).
+- **Tính toán góc**: Đo góc gập của khuỷu tay (`Elbow Angle`) và hiển thị góc động.
+- **Tùy chọn tay**: Hỗ trợ chọn **Tay Phải**, **Tay Trái** hoặc **Cả 2 Tay (Dual Arms)**.
+- **Quy chuẩn Rep**:
+  - Duỗi thẳng tay hạ tạ: góc > 150° (`DOWN`)
+  - Gập tạ đạt đỉnh co cơ: góc <= 48° (`UP`)
+  - Chuyển từ `DOWN` -> `UP` -> duỗi thẳng `DOWN`: **Tự động tăng +1 Rep!**
+- **Form Feedback**: Nhắc nhở gập sát đỉnh hoặc hạ tạ có kiểm soát.
 
-## Supabase Database Setup
+---
 
-Create the following tables in your Supabase SQL editor:
+## 🚀 Các Điểm Nổi Bật Khác
+- **Hiệu ứng Neon Cyberpunk**: Khung xương phát sáng màu Cyan / Cam Neon tuyệt đẹp.
+- **Âm thanh & Giọng đọc số Rep**: Tự động đọc số bằng giọng nói tiếng Việt ("Một", "Hai", "Ba"...) và tiếng beep qua Web Speech API & Web Audio API.
+- **Thanh đo góc & tiến độ (Gauge Bar)**: Thanh phần trăm trực quan giúp bạn biết mình đã gập/ngồi bao nhiêu % mục tiêu.
+- **Đổi Camera Trước / Sau**: Dễ dàng chuyển đổi giữa camera selfie (tự động lật gương) và camera sau.
+- **Đồng bộ Supabase**: Tự động đồng bộ lịch sử tập luyện và mục tiêu lên database đám mây.
 
-```sql
--- 1. Workout Sessions Table
-create table workout_sessions (
-  id bigint generated always as identity primary key,
-  exercise_type text not null,
-  start_time bigint not null,
-  end_time bigint not null,
-  duration_seconds bigint not null,
-  rep_count integer not null,
-  calories_burned float4 not null,
-  distance_km float4,
-  user_id text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+---
 
--- 2. Daily Goals Table
-create table daily_goals (
-  id bigint generated always as identity primary key,
-  date_string text not null,
-  exercise_type text not null,
-  target_value integer not null,
-  user_id text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-```
-
-## Deployment
-
-Since it is a pure static web app, you can easily host it on Vercel, Netlify, or GitHub Pages. Just drag and drop the folder or link your repository to deploy instantly.
+## 🛠️ Hướng Dẫn Sử Dụng
+1. Mở trang web trên trình duyệt điện thoại hoặc máy tính (Khuyên dùng Chrome hoặc Safari).
+2. Tại màn hình chính hoặc mục **Tập luyện**, bấm vào **Squat AI** hoặc **Gập tạ tay AI**.
+3. Cho phép quyền truy cập Camera khi trình duyệt yêu cầu.
+4. Đứng hoặc ngồi lùi xa camera khoảng 1.5m - 2m để camera nhìn thấy rõ cơ thể.
+5. Bắt đầu tập luyện, AI sẽ tự động vẽ khung xương và đếm rep cho bạn!

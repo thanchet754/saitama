@@ -19,14 +19,23 @@ const translations = {
         quick_start: "Bắt đầu nhanh",
         btn_set_automatic: "Thử thách Saitama",
         daily_goals_title: "Mục tiêu hôm nay",
-        ex_squat: "Đứng lên ngồi xuống",
+        ai_badge: "AI POSE SKELETON",
+        ai_hero_title: "Đếm Bằng Khung Xương AI",
+        ai_hero_desc: "Mở camera để AI tự vẽ khung xương, kiểm tra góc gập và đếm số rep tự động!",
+        category_ai: "Bài Tập AI Camera (Khung Xương)",
+        category_sensor: "Bài Tập Cảm Biến Bỏ Túi",
+        ex_ai_squat: "Đứng lên ngồi xuống (Squat AI)",
+        ex_ai_bicep_curl: "Gập tạ tay (Bicep Curl AI)",
+        ai_squat_hint: "Đo góc khớp háng - đầu gối - cổ chân",
+        ai_curl_hint: "Đo góc khuỷu tay trái, phải hoặc 2 tay",
+        ex_squat: "Squat cảm biến",
         ex_crunch: "Gập bụng",
         ex_pushup: "Chống đẩy",
         ex_running: "Chạy bộ",
         ex_pullup: "Lên xà",
         ex_plank: "Plank",
         type_reps: "Đếm số lần",
-        type_time: "Đếm thời gian",
+        type_time: "Định vị GPS / Thời gian",
         nav_home: "Trang chủ",
         nav_workout: "Tập luyện",
         nav_history: "Lịch sử",
@@ -60,14 +69,23 @@ const translations = {
         quick_start: "Quick Start",
         btn_set_automatic: "Saitama Challenge",
         daily_goals_title: "Today's Goals",
-        ex_squat: "Squat",
+        ai_badge: "AI POSE SKELETON",
+        ai_hero_title: "AI Skeleton Rep Counter",
+        ai_hero_desc: "Turn on your camera for real-time skeleton tracking, angle checking and automatic rep counting!",
+        category_ai: "AI Camera (Pose Skeleton)",
+        category_sensor: "Pocket Sensor Workouts",
+        ex_ai_squat: "AI Squat (Pose Camera)",
+        ex_ai_bicep_curl: "AI Bicep Curl (Pose Camera)",
+        ai_squat_hint: "Tracks Hip - Knee - Ankle joint angles",
+        ai_curl_hint: "Tracks Left, Right or Both Elbow angles",
+        ex_squat: "Sensor Squat",
         ex_crunch: "Crunch",
         ex_pushup: "Push-up",
         ex_running: "Running",
         ex_pullup: "Pull-up",
         ex_plank: "Plank",
         type_reps: "Reps counting",
-        type_time: "Time tracker",
+        type_time: "GPS / Time tracker",
         nav_home: "Home",
         nav_workout: "Workout",
         nav_history: "History",
@@ -99,6 +117,8 @@ const translations = {
 
 // Exercise metadata
 const exerciseMetadata = {
+    AI_SQUAT: { caloriesPerUnit: 0.35, isRep: true },
+    AI_BICEP_CURL: { caloriesPerUnit: 0.30, isRep: true },
     SQUAT: { caloriesPerUnit: 0.32, isRep: true },
     CRUNCH: { caloriesPerUnit: 0.25, isRep: true },
     PUSH_UP: { caloriesPerUnit: 0.36, isRep: true },
@@ -117,23 +137,25 @@ const state = {
     goals: JSON.parse(localStorage.getItem("saitama_goals")) || [],
     sessions: JSON.parse(localStorage.getItem("saitama_sessions")) || [],
     
-    // Active Workout state
-    activeWorkout: null, // { type, repCount, durationSeconds, distanceKm, timer, sensorListener, locationWatcher, startTimestamp }
+    // Active Accelerometer Workout state
+    activeWorkout: null,
     
     // Sync state
     syncPending: false
 };
 
-// Beep Feedback via Web Audio API (No files required!)
-function playBeep() {
+// ==============================================================
+// AUDIO FEEDBACK & TEXT-TO-SPEECH
+// ==============================================================
+function playBeep(frequency = 600, duration = 0.1) {
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
 
         oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); 
-        gainNode.gain.setValueAtTime(0.08, audioCtx.currentTime); 
+        oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime); 
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); 
 
         oscillator.connect(gainNode);
         gainNode.connect(audioCtx.destination);
@@ -142,9 +164,38 @@ function playBeep() {
         setTimeout(() => {
             oscillator.stop();
             audioCtx.close();
-        }, 100);
+        }, duration * 1000);
     } catch (e) {
-        console.error("Audio Context beep failed", e);
+        console.warn("Audio Context beep failed", e);
+    }
+}
+
+// Speak rep number using Web Speech Synthesis API
+function speakCount(number) {
+    if (!aiIsVoiceEnabled || !window.speechSynthesis) return;
+    try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(String(number));
+        utterance.lang = state.lang === 'vi' ? 'vi-VN' : 'en-US';
+        utterance.rate = 1.15;
+        utterance.pitch = 1.05;
+        window.speechSynthesis.speak(utterance);
+    } catch (e) {
+        console.warn("Speech synthesis error", e);
+    }
+}
+
+// Speak voice feedback prompt
+function speakFeedback(textVi, textEn) {
+    if (!aiIsVoiceEnabled || !window.speechSynthesis) return;
+    try {
+        const text = state.lang === 'vi' ? textVi : textEn;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = state.lang === 'vi' ? 'vi-VN' : 'en-US';
+        utterance.rate = 1.1;
+        window.speechSynthesis.speak(utterance);
+    } catch (e) {
+        console.warn("Speech synthesis error", e);
     }
 }
 
@@ -158,7 +209,7 @@ function getOrCreateUserId() {
     return id;
 }
 
-// Format local date string
+// Format local date string (YYYY-MM-DD)
 function getTodayDateString() {
     const d = new Date();
     const month = '' + (d.getMonth() + 1);
@@ -191,7 +242,7 @@ function updateLocalization() {
     // Goals label dialog
     const goalInputLabel = document.getElementById("goal-input-label");
     if (goalInputLabel) {
-        const activeType = document.querySelector(".exercise-btn-select.active").dataset.type;
+        const activeType = document.querySelector(".exercise-btn-select.active")?.dataset.type || "SQUAT";
         goalInputLabel.textContent = activeType === "RUNNING" ? `${t.stat_distance} (m)` : (activeType === "PLANK" ? `${t.stat_duration} (s)` : `${t.stat_reps} (lần)`);
     }
 
@@ -201,134 +252,640 @@ function updateLocalization() {
     renderStats();
 }
 
-// ----------------------------------------------------
-// SENSORS & MOTION DETECTION (Web Accelerometer)
-// ----------------------------------------------------
-function setupAccelerometer(type) {
-    if (!window.DeviceMotionEvent) {
-        console.warn("DeviceMotionEvent is not supported on this browser.");
-        return null;
+// ==============================================================
+// AI CAMERA POSE SKELETON ENGINE (MediaPipe Pose Detection)
+// ==============================================================
+
+let poseModel = null;
+let cameraStream = null;
+let isAiRunning = false;
+let isAiPaused = false;
+let aiExerciseType = 'AI_SQUAT'; // 'AI_SQUAT' or 'AI_BICEP_CURL'
+let aiSelectedArm = 'BOTH'; // 'BOTH', 'RIGHT', 'LEFT'
+let aiFacingMode = 'user'; // 'user' (front) or 'environment' (back)
+let aiIsVoiceEnabled = true;
+
+// Active AI Workout Session State
+let aiRepCount = 0;
+let aiDurationSeconds = 0;
+let aiTimer = null;
+let aiStartTimestamp = 0;
+let aiAccuracyScores = []; // tracks form depth for each rep
+
+// Pose Stage tracking
+let squatStage = 'UP'; // 'UP' or 'DOWN'
+let squatMinAngleThisRep = 180;
+
+let curlStageRight = 'DOWN'; // 'DOWN' or 'UP'
+let curlStageLeft = 'DOWN';
+let curlStageBoth = 'DOWN';
+let curlMinAngleThisRep = 180;
+
+let lastFeedbackTime = 0;
+
+// Vector Angle Calculator (A-B-C with B as vertex)
+function calculateAngle(a, b, c) {
+    if (!a || !b || !c) return 180;
+    const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+    let angle = Math.abs((radians * 180.0) / Math.PI);
+    if (angle > 180.0) {
+        angle = 360.0 - angle;
     }
-
-    // Peak counter configuration
-    const config = {
-        SQUAT: { up: 2.5, down: 0.8, debounce: 1000 },
-        CRUNCH: { up: 2.2, down: 0.6, debounce: 1200 },
-        PUSH_UP: { up: 2.0, down: 0.5, debounce: 800 },
-        PULL_UP: { up: 3.0, down: 1.0, debounce: 1200 }
-    }[type] || { up: 2.0, down: 0.5, debounce: 800 };
-
-    let isAboveThreshold = false;
-    let lastRepTime = 0;
-    
-    // Low pass filter components
-    const alpha = 0.15;
-    const gravity = [0, 0, 0];
-
-    const handleMotionEvent = (event) => {
-        const acc = event.accelerationIncludingGravity || event.acceleration;
-        if (!acc || acc.x === null) return;
-
-        // Low-pass filter to isolate gravity
-        gravity[0] = alpha * gravity[0] + (1 - alpha) * acc.x;
-        gravity[1] = alpha * gravity[1] + (1 - alpha) * acc.y;
-        gravity[2] = alpha * gravity[2] + (1 - alpha) * acc.z;
-
-        // Linear acceleration (gravity removed)
-        const linearX = acc.x - gravity[0];
-        const linearY = acc.y - gravity[1];
-        const linearZ = acc.z - gravity[2];
-
-        // Resultant magnitude
-        const magnitude = Math.sqrt(linearX * linearX + linearY * linearY + linearZ * linearZ);
-
-        // Canvas Motion Graph rendering
-        drawMotionWave(magnitude);
-
-        // Threshold crossing detection
-        const now = Date.now();
-        if (magnitude > config.up && !isAboveThreshold) {
-            isAboveThreshold = true;
-        } else if (magnitude < config.down && isAboveThreshold) {
-            isAboveThreshold = false;
-            if (now - lastRepTime > config.debounce) {
-                state.activeWorkout.repCount += 1;
-                document.getElementById("counter-value").textContent = state.activeWorkout.repCount;
-                playBeep();
-                lastRepTime = now;
-            }
-        }
-    };
-
-    window.addEventListener("devicemotion", handleMotionEvent);
-    return handleMotionEvent;
+    return Math.round(angle);
 }
 
-// Geolocation (Running)
-function setupGeolocation() {
-    if (!navigator.geolocation) return null;
-    
-    let lastCoords = null;
-    
-    const watcher = navigator.geolocation.watchPosition((position) => {
-        const coords = position.coords;
-        if (lastCoords) {
-            const dist = calculateDistance(lastCoords.latitude, lastCoords.longitude, coords.latitude, coords.longitude);
-            state.activeWorkout.distanceKm += dist;
-            document.getElementById("overlay-distance").textContent = state.activeWorkout.distanceKm.toFixed(2) + " km";
-        }
-        lastCoords = coords;
-    }, (err) => {
-        console.error("GPS Watch failed", err);
-    }, {
-        enableHighAccuracy: true,
-        maximumAge: 1000
+// Initialize MediaPipe Pose Model
+async function initPoseModel() {
+    if (poseModel) return poseModel;
+
+    if (typeof window.Pose === 'undefined') {
+        throw new Error("MediaPipe Pose library is loading or failed to load. Check your internet connection.");
+    }
+
+    poseModel = new window.Pose({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
     });
 
-    return watcher;
+    poseModel.setOptions({
+        modelComplexity: 1, // 0: lite, 1: full, 2: heavy
+        smoothLandmarks: true,
+        enableSegmentation: false,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+
+    poseModel.onResults(onPoseResults);
+    return poseModel;
 }
 
-// Calculate GPS distance using Haversine formula (km)
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371; 
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+// Open Fullscreen AI Camera Studio
+window.openAiWorkout = async function(type = 'AI_SQUAT') {
+    aiExerciseType = type;
+    const overlay = document.getElementById("ai-workout-overlay");
+    overlay.classList.remove("hidden");
+    
+    // Reset state
+    aiRepCount = 0;
+    aiDurationSeconds = 0;
+    aiAccuracyScores = [];
+    isAiPaused = false;
+    squatStage = 'UP';
+    squatMinAngleThisRep = 180;
+    curlStageRight = 'DOWN';
+    curlStageLeft = 'DOWN';
+    curlStageBoth = 'DOWN';
+    curlMinAngleThisRep = 180;
+
+    document.getElementById("ai-rep-counter").textContent = "0";
+    document.getElementById("ai-duration").textContent = "00:00";
+    document.getElementById("ai-calories").textContent = "0 kcal";
+    document.getElementById("ai-form-accuracy").textContent = "100%";
+    document.getElementById("ai-loading-overlay").classList.remove("hidden");
+
+    // UI Pill selection
+    updateAiExercisePill();
+
+    // Start Timer
+    aiStartTimestamp = Date.now();
+    clearInterval(aiTimer);
+    aiTimer = setInterval(() => {
+        if (!isAiPaused) {
+            aiDurationSeconds++;
+            const mins = Math.floor(aiDurationSeconds / 60);
+            const secs = aiDurationSeconds % 60;
+            document.getElementById("ai-duration").textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            
+            // Calculate real-time calories burned
+            const cals = aiRepCount * (exerciseMetadata[aiExerciseType]?.caloriesPerUnit || 0.35);
+            document.getElementById("ai-calories").textContent = Math.round(cals * 10) / 10 + " kcal";
+        }
+    }, 1000);
+
+    try {
+        await initPoseModel();
+        await startCameraStream();
+    } catch (err) {
+        console.error("Failed to start AI Workout:", err);
+        alert(state.lang === 'vi' 
+            ? "Lỗi khởi tạo AI Camera: " + err.message 
+            : "AI Camera Error: " + err.message);
+        closeAiWorkout();
+    }
+};
+
+// Switch between Squat and Bicep Curl inside AI Camera
+window.switchAiExercise = function(type) {
+    aiExerciseType = type;
+    squatStage = 'UP';
+    squatMinAngleThisRep = 180;
+    curlStageRight = 'DOWN';
+    curlStageLeft = 'DOWN';
+    curlStageBoth = 'DOWN';
+    curlMinAngleThisRep = 180;
+    updateAiExercisePill();
+};
+
+function updateAiExercisePill() {
+    const isSquat = aiExerciseType === 'AI_SQUAT';
+    document.getElementById("ai-select-squat").classList.toggle("active", isSquat);
+    document.getElementById("ai-select-curl").classList.toggle("active", !isSquat);
+    
+    // Arm selector only visible for Bicep Curl
+    document.getElementById("ai-arm-selector").classList.toggle("hidden", isSquat);
+    
+    // Gauge target label
+    if (isSquat) {
+        document.getElementById("ai-gauge-joint-name").textContent = state.lang === 'vi' ? "Khớp Gối (Knee)" : "Knee Joint";
+        document.getElementById("ai-target-rule").textContent = state.lang === 'vi' ? "Mục tiêu: < 95° để tính rep" : "Target: < 95° for rep";
+        document.getElementById("ai-stage-badge").textContent = "UP";
+    } else {
+        document.getElementById("ai-gauge-joint-name").textContent = state.lang === 'vi' ? "Khớp Khuỷu Tay (Elbow)" : "Elbow Joint";
+        document.getElementById("ai-target-rule").textContent = state.lang === 'vi' ? "Mục tiêu: < 48° để đạt đỉnh" : "Target: < 48° for peak";
+        document.getElementById("ai-stage-badge").textContent = "DOWN";
+    }
 }
 
-// Canvas Wave drawing
-let canvasPhase = 0;
-function drawMotionWave(sensorMagnitude) {
-    const canvas = document.getElementById("motion-canvas");
+// Start Camera Stream via WebRTC
+async function startCameraStream() {
+    const video = document.getElementById("ai-video");
+    const canvas = document.getElementById("ai-canvas");
+
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+    }
+
+    const constraints = {
+        video: {
+            facingMode: aiFacingMode,
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+        },
+        audio: false
+    };
+
+    cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = cameraStream;
+    await video.play();
+
+    // Match canvas dimensions to video
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+
+    if (aiFacingMode === 'user') {
+        canvas.classList.add("mirrored");
+    } else {
+        canvas.classList.remove("mirrored");
+    }
+
+    document.getElementById("ai-loading-overlay").classList.add("hidden");
+    isAiRunning = true;
+
+    // Run render frame loop
+    runPoseLoop();
+}
+
+// RequestAnimationFrame Camera Frame Loop
+async function runPoseLoop() {
+    if (!isAiRunning) return;
+    const video = document.getElementById("ai-video");
+    
+    if (video && video.readyState >= 2 && !isAiPaused) {
+        try {
+            await poseModel.send({ image: video });
+        } catch (e) {
+            console.warn("Pose frame evaluation issue", e);
+        }
+    }
+    requestAnimationFrame(runPoseLoop);
+}
+
+// ==============================================================
+// MEDIAPIPE ONRESULTS: POSE LOGIC, SKELETON DRAWING & REP COUNTING
+// ==============================================================
+function onPoseResults(results) {
+    const canvas = document.getElementById("ai-canvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const width = canvas.width = canvas.clientWidth;
-    const height = canvas.height = canvas.clientHeight;
+    const width = canvas.width;
+    const height = canvas.height;
 
+    ctx.save();
     ctx.clearRect(0, 0, width, height);
-    ctx.strokeStyle = "#FF5E3A";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    
-    // Wave amplitude based on sensor magnitude
-    const amplitude = 5 + Math.min(sensorMagnitude * 3, 25);
-    canvasPhase += 0.1;
 
-    for (let x = 0; x < width; x++) {
-        const y = height / 2 + Math.sin((x / width) * 4 * Math.PI + canvasPhase) * amplitude;
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+    // 1. Draw raw camera frame
+    ctx.drawImage(results.image, 0, 0, width, height);
+
+    if (!results.poseLandmarks) {
+        setAiFeedback(
+            state.lang === 'vi' ? "Không thấy cơ thể! Vui lòng đứng trước camera." : "No body detected! Step in front of camera.",
+            "ready"
+        );
+        ctx.restore();
+        return;
     }
-    ctx.stroke();
+
+    const lm = results.poseLandmarks;
+
+    // 2. Draw Glowing Cyberpunk Neon Skeleton
+    drawNeonSkeleton(ctx, lm, width, height);
+
+    // 3. Process Workout Logic based on Exercise Type
+    if (aiExerciseType === 'AI_SQUAT') {
+        processSquatLogic(ctx, lm, width, height);
+    } else if (aiExerciseType === 'AI_BICEP_CURL') {
+        processBicepCurlLogic(ctx, lm, width, height);
+    }
+
+    ctx.restore();
+}
+
+// Draw Glowing Skeleton Connectors and Joints
+function drawNeonSkeleton(ctx, lm, width, height) {
+    // Body skeleton pairs
+    const connections = [
+        [11, 12], // shoulders
+        [11, 13], [13, 15], // left arm
+        [12, 14], [14, 16], // right arm
+        [11, 23], [12, 24], // torso
+        [23, 24], // hips
+        [23, 25], [25, 27], // left leg
+        [24, 26], [26, 28]  // right leg
+    ];
+
+    ctx.save();
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#00F2FE';
+    ctx.strokeStyle = '#00F2FE';
+
+    connections.forEach(([i, j]) => {
+        const p1 = lm[i];
+        const p2 = lm[j];
+        if (p1 && p2 && (p1.visibility || 1) > 0.4 && (p2.visibility || 1) > 0.4) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x * width, p1.y * height);
+            ctx.lineTo(p2.x * width, p2.y * height);
+            ctx.stroke();
+        }
+    });
+
+    // Draw Joint Dots
+    connections.flat().forEach(idx => {
+        const p = lm[idx];
+        if (p && (p.visibility || 1) > 0.4) {
+            const x = p.x * width;
+            const y = p.y * height;
+            
+            // Outer glow
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, 2 * Math.PI);
+            ctx.fillStyle = '#00F2FE';
+            ctx.fill();
+
+            // Inner bright core
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+        }
+    });
+    ctx.restore();
 }
 
 // ----------------------------------------------------
-// VIEW RENDERING
+// SQUAT REPETITION LOGIC
 // ----------------------------------------------------
+function processSquatLogic(ctx, lm, width, height) {
+    // Landmarks:
+    // Left: Hip (23), Knee (25), Ankle (27)
+    // Right: Hip (24), Knee (26), Ankle (28)
+    const lHip = lm[23], lKnee = lm[25], lAnkle = lm[27];
+    const rHip = lm[24], rKnee = lm[26], rAnkle = lm[28];
+
+    const lVis = ((lHip?.visibility || 0) + (lKnee?.visibility || 0) + (lAnkle?.visibility || 0)) / 3;
+    const rVis = ((rHip?.visibility || 0) + (rKnee?.visibility || 0) + (rAnkle?.visibility || 0)) / 3;
+
+    if (lVis < 0.45 && rVis < 0.45) {
+        setAiFeedback(
+            state.lang === 'vi' ? "Hãy lùi lại để camera thấy từ hông đến bàn chân" : "Step back so camera sees from hips to feet",
+            "ready"
+        );
+        return;
+    }
+
+    const lAngle = calculateAngle(lHip, lKnee, lAnkle);
+    const rAngle = calculateAngle(rHip, rKnee, rAnkle);
+
+    // Pick clearest leg, or the deeper squat knee if both are visible
+    let activeKneeAngle = 180;
+    let activeKneePoint = null;
+
+    if (lVis >= 0.45 && rVis >= 0.45) {
+        activeKneeAngle = Math.min(lAngle, rAngle);
+        activeKneePoint = lAngle <= rAngle ? lKnee : rKnee;
+    } else if (lVis >= 0.45) {
+        activeKneeAngle = lAngle;
+        activeKneePoint = lKnee;
+    } else {
+        activeKneeAngle = rAngle;
+        activeKneePoint = rKnee;
+    }
+
+    // Draw Angle Arc on the Knee
+    if (activeKneePoint) {
+        drawAngleLabel(ctx, activeKneePoint.x * width, activeKneePoint.y * height, activeKneeAngle, activeKneeAngle <= 95);
+    }
+
+    // Update gauge
+    // 170° = 0%, 90° = 100%
+    const gaugePercent = Math.max(0, Math.min(100, Math.round(((170 - activeKneeAngle) / (170 - 90)) * 100)));
+    document.getElementById("ai-current-angle").textContent = `${activeKneeAngle}°`;
+    document.getElementById("ai-gauge-fill").style.width = `${gaugePercent}%`;
+
+    // Squat State Machine
+    if (activeKneeAngle > 160) {
+        // Standing position
+        if (squatStage === 'DOWN') {
+            // Rep completed!
+            aiRepCount++;
+            squatStage = 'UP';
+            
+            // Check form depth quality
+            const isDeepGood = squatMinAngleThisRep <= 90;
+            aiAccuracyScores.push(isDeepGood ? 100 : 75);
+            updateFormAccuracyDisplay();
+
+            // Pop animation on counter
+            triggerRepPopAnimation();
+            
+            // Audio Feedback
+            playBeep(750, 0.12);
+            speakCount(aiRepCount);
+
+            setAiFeedback(
+                state.lang === 'vi' ? `Tuyệt vời! +1 Rep (Sâu: ${squatMinAngleThisRep}°)` : `Awesome! +1 Rep (Depth: ${squatMinAngleThisRep}°)`,
+                "good"
+            );
+            squatMinAngleThisRep = 180;
+        } else {
+            document.getElementById("ai-stage-badge").textContent = "UP (Đứng)";
+            setAiFeedback(
+                state.lang === 'vi' ? "Đứng thẳng người. Hạ mông ngồi xổm xuống!" : "Standing straight. Squat down!",
+                "ready"
+            );
+        }
+    } else if (activeKneeAngle <= 95) {
+        // Deep Squat Target reached!
+        squatStage = 'DOWN';
+        squatMinAngleThisRep = Math.min(squatMinAngleThisRep, activeKneeAngle);
+        document.getElementById("ai-stage-badge").textContent = "DOWN (Đạt)";
+        setAiFeedback(
+            state.lang === 'vi' ? "Tốt lắm! Giữ chắc và đứng thẳng lên!" : "Good depth! Push up and stand straight!",
+            "good"
+        );
+    } else {
+        // In-between motion
+        squatMinAngleThisRep = Math.min(squatMinAngleThisRep, activeKneeAngle);
+        if (squatStage === 'UP') {
+            setAiFeedback(
+                state.lang === 'vi' ? "Xuống sâu hơn nữa (< 95°)!" : "Go deeper (< 95°)!",
+                "warning"
+            );
+        }
+    }
+}
+
+// ----------------------------------------------------
+// BICEP CURL REPETITION LOGIC (Gập tạ tay)
+// ----------------------------------------------------
+function processBicepCurlLogic(ctx, lm, width, height) {
+    // Landmarks:
+    // Left: Shoulder (11), Elbow (13), Wrist (15)
+    // Right: Shoulder (12), Elbow (14), Wrist (16)
+    const lSh = lm[11], lEl = lm[13], lWr = lm[15];
+    const rSh = lm[12], rEl = lm[14], rWr = lm[16];
+
+    const lVis = ((lSh?.visibility || 0) + (lEl?.visibility || 0) + (lWr?.visibility || 0)) / 3;
+    const rVis = ((rSh?.visibility || 0) + (rEl?.visibility || 0) + (rWr?.visibility || 0)) / 3;
+
+    if (lVis < 0.45 && rVis < 0.45) {
+        setAiFeedback(
+            state.lang === 'vi' ? "Hãy đứng lùi lại để camera thấy cánh tay và khuỷu tay" : "Step back so camera sees your arms and elbows",
+            "ready"
+        );
+        return;
+    }
+
+    const lAngle = calculateAngle(lSh, lEl, lWr);
+    const rAngle = calculateAngle(rSh, rEl, rWr);
+
+    let activeAngle = 180;
+    let activeElbowPoint = null;
+
+    if (aiSelectedArm === 'RIGHT') {
+        activeAngle = rAngle;
+        activeElbowPoint = rEl;
+    } else if (aiSelectedArm === 'LEFT') {
+        activeAngle = lAngle;
+        activeElbowPoint = lEl;
+    } else {
+        // BOTH / AUTO: Pick arm with deepest flexion
+        if (lVis >= 0.45 && rVis >= 0.45) {
+            activeAngle = Math.min(lAngle, rAngle);
+            activeElbowPoint = lAngle <= rAngle ? lEl : rEl;
+        } else if (rVis >= 0.45) {
+            activeAngle = rAngle;
+            activeElbowPoint = rEl;
+        } else {
+            activeAngle = lAngle;
+            activeElbowPoint = lEl;
+        }
+    }
+
+    // Draw Angle Arc on Elbow
+    if (activeElbowPoint) {
+        drawAngleLabel(ctx, activeElbowPoint.x * width, activeElbowPoint.y * height, activeAngle, activeAngle <= 48);
+    }
+
+    // Update gauge
+    // 160° = 0%, 40° = 100%
+    const gaugePercent = Math.max(0, Math.min(100, Math.round(((160 - activeAngle) / (160 - 40)) * 100)));
+    document.getElementById("ai-current-angle").textContent = `${activeAngle}°`;
+    document.getElementById("ai-gauge-fill").style.width = `${gaugePercent}%`;
+
+    // Curl State Machine
+    if (activeAngle > 150) {
+        // Arm Extended (DOWN position)
+        if (curlStageBoth === 'UP') {
+            aiRepCount++;
+            curlStageBoth = 'DOWN';
+
+            const isPeakGood = curlMinAngleThisRep <= 45;
+            aiAccuracyScores.push(isPeakGood ? 100 : 75);
+            updateFormAccuracyDisplay();
+
+            triggerRepPopAnimation();
+            playBeep(750, 0.12);
+            speakCount(aiRepCount);
+
+            setAiFeedback(
+                state.lang === 'vi' ? `Chuẩn đỉnh! +1 Rep (Gập: ${curlMinAngleThisRep}°)` : `Great peak! +1 Rep (Curl: ${curlMinAngleThisRep}°)`,
+                "good"
+            );
+            curlMinAngleThisRep = 180;
+        } else {
+            document.getElementById("ai-stage-badge").textContent = "DOWN (Duỗi)";
+            setAiFeedback(
+                state.lang === 'vi' ? "Tay duỗi thẳng. Bắt đầu gập tạ lên!" : "Arm extended. Curl weight up!",
+                "ready"
+            );
+        }
+    } else if (activeAngle <= 48) {
+        // Peak Flexion Target reached!
+        curlStageBoth = 'UP';
+        curlMinAngleThisRep = Math.min(curlMinAngleThisRep, activeAngle);
+        document.getElementById("ai-stage-badge").textContent = "UP (Đỉnh gập)";
+        setAiFeedback(
+            state.lang === 'vi' ? "Đạt đỉnh gập! Hạ tạ xuống có kiểm soát!" : "Peak reached! Lower down with control!",
+            "good"
+        );
+    } else {
+        curlMinAngleThisRep = Math.min(curlMinAngleThisRep, activeAngle);
+        if (curlStageBoth === 'DOWN') {
+            setAiFeedback(
+                state.lang === 'vi' ? "Gập cao lên nữa (< 48°)!" : "Curl higher to peak (< 48°)!",
+                "warning"
+            );
+        }
+    }
+}
+
+// Draw Angle degree bubble directly next to joint on canvas
+function drawAngleLabel(ctx, x, y, angle, isTargetAchieved) {
+    ctx.save();
+    const text = `${angle}°`;
+    ctx.font = 'bold 16px Outfit, sans-serif';
+    const textWidth = ctx.measureText(text).width;
+
+    // Background pill
+    ctx.fillStyle = 'rgba(15, 15, 18, 0.85)';
+    ctx.beginPath();
+    ctx.roundRect(x + 12, y - 14, textWidth + 16, 26, 13);
+    ctx.fill();
+
+    // Border
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = isTargetAchieved ? '#00E676' : '#FF9500';
+    ctx.stroke();
+
+    // Text
+    ctx.fillStyle = isTargetAchieved ? '#00E676' : '#FFFFFF';
+    ctx.fillText(text, x + 20, y + 5);
+
+    // Mini circle on the joint itself
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, 2 * Math.PI);
+    ctx.fillStyle = isTargetAchieved ? '#00E676' : '#FF9500';
+    ctx.fill();
+    ctx.restore();
+}
+
+// Set feedback text with animated status pill
+function setAiFeedback(text, status = 'ready') {
+    const pill = document.getElementById("ai-feedback-pill");
+    const label = document.getElementById("ai-feedback-text");
+    if (label.textContent !== text) {
+        label.textContent = text;
+        pill.className = `ai-feedback-pill ${status}`;
+    }
+}
+
+// Pop animation when rep counter increments
+function triggerRepPopAnimation() {
+    const counter = document.getElementById("ai-rep-counter");
+    counter.textContent = aiRepCount;
+    counter.classList.add("pop-effect");
+    setTimeout(() => {
+        counter.classList.remove("pop-effect");
+    }, 250);
+}
+
+// Update average form accuracy
+function updateFormAccuracyDisplay() {
+    if (aiAccuracyScores.length === 0) return;
+    const avg = Math.round(aiAccuracyScores.reduce((a, b) => a + b, 0) / aiAccuracyScores.length);
+    document.getElementById("ai-form-accuracy").textContent = `${avg}%`;
+}
+
+// Close & Stop AI Workout
+window.closeAiWorkout = function() {
+    isAiRunning = false;
+    clearInterval(aiTimer);
+
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+
+    const overlay = document.getElementById("ai-workout-overlay");
+    overlay.classList.add("hidden");
+};
+
+// Finish & Save AI Workout
+window.finishAiWorkout = function() {
+    if (aiRepCount === 0 && aiDurationSeconds < 5) {
+        closeAiWorkout();
+        return;
+    }
+
+    clearInterval(aiTimer);
+    isAiRunning = false;
+
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+
+    const calPerUnit = exerciseMetadata[aiExerciseType]?.caloriesPerUnit || 0.35;
+    const totalCalories = Math.round(aiRepCount * calPerUnit * 10) / 10;
+    const avgAccuracy = aiAccuracyScores.length > 0 
+        ? Math.round(aiAccuracyScores.reduce((a, b) => a + b, 0) / aiAccuracyScores.length) 
+        : 100;
+
+    const session = {
+        id: Date.now(),
+        exercise_type: aiExerciseType,
+        start_time: aiStartTimestamp,
+        end_time: Date.now(),
+        duration_seconds: aiDurationSeconds,
+        rep_count: aiRepCount,
+        calories_burned: totalCalories,
+        form_accuracy: avgAccuracy,
+        sync_status: "PENDING"
+    };
+
+    state.sessions.push(session);
+    localStorage.setItem("saitama_sessions", JSON.stringify(state.sessions));
+
+    document.getElementById("ai-workout-overlay").classList.add("hidden");
+
+    // Success Notification & Celebration
+    playBeep(880, 0.25);
+    alert(state.lang === 'vi' 
+        ? `🎉 Chúc mừng! Bạn đã hoàn thành ${aiRepCount} reps ${aiExerciseType === 'AI_SQUAT' ? 'Squat' : 'Gập tạ tay'}.\n🔥 Đốt cháy: ${totalCalories} kcal\n🎯 Chuẩn form: ${avgAccuracy}%`
+        : `🎉 Great workout! You completed ${aiRepCount} reps.\n🔥 Burned: ${totalCalories} kcal\n🎯 Form Accuracy: ${avgAccuracy}%`);
+
+    renderStreakCard();
+    renderGoals();
+    renderHistory();
+    renderStats();
+    triggerSync();
+};
+
+// ==============================================================
+// DASHBOARD RENDERING (Home, Goals, History, Stats)
+// ==============================================================
 function renderStreakCard() {
     const today = getTodayDateString();
     
@@ -366,7 +923,7 @@ function renderStreakCard() {
     todayGoals.forEach(goal => {
         const type = goal.exercise_type;
         const totalDone = todaySessions.filter(s => s.exercise_type === type).reduce((acc, curr) => {
-            if (exerciseMetadata[type].isRep) return acc + curr.rep_count;
+            if (exerciseMetadata[type]?.isRep) return acc + curr.rep_count;
             if (type === "RUNNING") return acc + Math.round(curr.distance_km * 1000);
             return acc + curr.duration_seconds;
         }, 0);
@@ -393,12 +950,11 @@ function renderGoals() {
     if (todayGoals.length === 0) {
         container.innerHTML = `
             <div class="goal-progress-card" style="justify-content: center; opacity: 0.6; cursor: pointer;" onclick="document.getElementById('goal-modal').classList.remove('hidden')">
-                <span>+ Click to add your first goal today</span>
+                <span>+ ${state.lang === 'vi' ? 'Bấm để thêm mục tiêu hôm nay' : 'Click to add today target'}</span>
             </div>`;
         return;
     }
 
-    // Fetch today's session summary
     const todaySessions = state.sessions.filter(s => {
         const d = new Date(s.start_time);
         const y = d.getFullYear();
@@ -409,7 +965,7 @@ function renderGoals() {
 
     container.innerHTML = todayGoals.map(goal => {
         const type = goal.exercise_type;
-        const metadata = exerciseMetadata[type];
+        const metadata = exerciseMetadata[type] || { isRep: true };
         const doneVal = todaySessions.filter(s => s.exercise_type === type).reduce((acc, curr) => {
             if (metadata.isRep) return acc + curr.rep_count;
             if (type === "RUNNING") return acc + Math.round(curr.distance_km * 1000); // meters
@@ -419,7 +975,7 @@ function renderGoals() {
         const progress = Math.min((doneVal / goal.target_value) * 100, 100);
         const isDone = doneVal >= goal.target_value;
 
-        const exName = t["ex_" + type.toLowerCase()];
+        const exName = t["ex_" + type.toLowerCase()] || type;
         const unit = type === "RUNNING" ? "m" : (type === "PLANK" ? "s" : "reps");
 
         return `
@@ -451,15 +1007,13 @@ function renderHistory() {
     const t = translations[state.lang];
     
     if (state.sessions.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding: 40px 0; color: var(--text-secondary);">${t.stats_history_empty}</div>`;
+        container.innerHTML = `<div style="text-align:center; padding: 40px 0; color: var(--text-secondary);">${state.lang === 'vi' ? 'Chưa có lịch sử tập luyện' : 'No workout records found'}</div>`;
         return;
     }
 
-    // Sort descending by start time
     const sorted = [...state.sessions].sort((a, b) => b.start_time - a.start_time);
-    
-    // Group by date
     const grouped = {};
+    
     sorted.forEach(s => {
         const dateObj = new Date(s.start_time);
         const dayStr = dateObj.toLocaleDateString(state.lang === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -470,22 +1024,25 @@ function renderHistory() {
     container.innerHTML = Object.keys(grouped).map(day => {
         const itemsHtml = grouped[day].map(s => {
             const type = s.exercise_type;
-            const isRep = exerciseMetadata[type].isRep;
+            const isRep = (exerciseMetadata[type] || {}).isRep ?? true;
             
             const mins = Math.floor(s.duration_seconds / 60);
             const secs = s.duration_seconds % 60;
             const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             
-            const performance = isRep ? `${s.rep_count} reps` : (type === "RUNNING" ? `${s.distance_km.toFixed(2)} km` : timeStr);
+            const performance = isRep ? `${s.rep_count} reps` : (type === "RUNNING" ? `${(s.distance_km || 0).toFixed(2)} km` : timeStr);
             const isSynced = s.sync_status === "SYNCED";
+            const isAi = type.startsWith("AI_");
 
             return `
                 <div class="history-item-card">
                     <div class="history-item-left">
-                        <div class="history-icon"><i class="fa-solid ${type === 'RUNNING' ? 'fa-person-running' : 'fa-dumbbell'}"></i></div>
+                        <div class="history-icon" style="${isAi ? 'color:#00F2FE; background:rgba(0,242,254,0.1);' : ''}">
+                            <i class="fa-solid ${isAi ? 'fa-robot' : (type === 'RUNNING' ? 'fa-person-running' : 'fa-dumbbell')}"></i>
+                        </div>
                         <div class="history-details">
-                            <h4>${t["ex_" + type.toLowerCase()]}</h4>
-                            <p>${t.stat_duration}: ${timeStr} | ${String(Math.round(s.calories_burned))} kcal</p>
+                            <h4>${t["ex_" + type.toLowerCase()] || type} ${isAi ? '<span style="color:#00F2FE; font-size:10px;">[AI CAMERA]</span>' : ''}</h4>
+                            <p>${t.stat_duration}: ${timeStr} | ${Math.round(s.calories_burned)} kcal</p>
                         </div>
                     </div>
                     <div class="history-item-right">
@@ -508,13 +1065,12 @@ function renderHistory() {
 function renderStats() {
     const t = translations[state.lang];
     
-    // Aggregates
     let totalReps = 0;
     let totalDurationSeconds = 0;
     let totalCalories = 0;
     let totalDistance = 0;
 
-    const prs = {}; // Peak records by ExerciseType
+    const prs = {};
 
     state.sessions.forEach(s => {
         totalReps += s.rep_count;
@@ -522,14 +1078,15 @@ function renderStats() {
         totalCalories += s.calories_burned;
         totalDistance += s.distance_km || 0;
 
-        // Personal record calculation
         const type = s.exercise_type;
         const currentPr = prs[type] || 0;
-        if (exerciseMetadata[type].isRep) {
+        const isRep = (exerciseMetadata[type] || {}).isRep ?? true;
+        
+        if (isRep) {
             prs[type] = Math.max(currentPr, s.rep_count);
         } else if (type === "RUNNING") {
             prs[type] = Math.max(currentPr, s.distance_km || 0);
-        } else { // Plank
+        } else {
             prs[type] = Math.max(currentPr, s.duration_seconds);
         }
     });
@@ -539,23 +1096,23 @@ function renderStats() {
     document.getElementById("stat-total-calories").textContent = Math.round(totalCalories);
     document.getElementById("stat-total-distance").textContent = totalDistance.toFixed(1) + "km";
 
-    // Draw Personal Records Card
+    // Personal Records
     const prContainer = document.getElementById("pr-list");
     prContainer.innerHTML = Object.keys(prs).map(type => {
         const val = prs[type];
-        const displayVal = exerciseMetadata[type].isRep ? `${val} reps` : (type === "RUNNING" ? `${val.toFixed(2)} km` : `${Math.floor(val/60)}m ${val%60}s`);
+        const isRep = (exerciseMetadata[type] || {}).isRep ?? true;
+        const displayVal = isRep ? `${val} reps` : (type === "RUNNING" ? `${val.toFixed(2)} km` : `${Math.floor(val/60)}m ${val%60}s`);
         return `
             <div class="pr-item-card">
                 <div class="pr-item-left">
                     <div class="pr-badge-icon"><i class="fa-solid fa-trophy"></i></div>
-                    <span class="pr-name">${t["ex_" + type.toLowerCase()]}</span>
+                    <span class="pr-name">${t["ex_" + type.toLowerCase()] || type}</span>
                 </div>
                 <span class="pr-value">${displayVal}</span>
             </div>
         `;
     }).join("");
 
-    // Draw Weekly Activity Chart
     renderWeeklyChart();
 }
 
@@ -564,7 +1121,6 @@ function renderWeeklyChart() {
     const last7Days = [];
     const dayNames = [];
 
-    // Calculate dates for last 7 days
     const localeString = state.lang === 'vi' ? 'vi-VN' : 'en-US';
     for (let i = 6; i >= 0; i--) {
         const date = new Date();
@@ -573,7 +1129,6 @@ function renderWeeklyChart() {
         dayNames.push(date.toLocaleDateString(localeString, { weekday: 'short' }).replace('.', ''));
     }
 
-    // Aggregate calories burned per day
     const dailyCalories = last7Days.map(dateStr => {
         return state.sessions.filter(s => {
             const d = new Date(s.start_time);
@@ -598,15 +1153,15 @@ function renderWeeklyChart() {
     }).join("");
 }
 
-// ----------------------------------------------------
-// WORKOUT CONTROLLER (Start / Stop)
-// ----------------------------------------------------
+// ==============================================================
+// SENSOR WORKOUT (ACCELEROMETER FALLBACK)
+// ==============================================================
 function startWorkout(type) {
     document.getElementById("info-modal").classList.add("hidden");
     document.getElementById("workout-overlay").classList.remove("hidden");
     
     const t = translations[state.lang];
-    document.getElementById("overlay-exercise-name").textContent = t["ex_" + type.toLowerCase()];
+    document.getElementById("overlay-exercise-name").textContent = t["ex_" + type.toLowerCase()] || type;
     document.getElementById("counter-label").textContent = exerciseMetadata[type].isRep ? t.stat_reps : t.stat_duration;
     document.getElementById("counter-value").textContent = "0";
 
@@ -626,7 +1181,6 @@ function startWorkout(type) {
             const secs = state.activeWorkout.durationSeconds % 60;
             document.getElementById("overlay-duration").textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             
-            // Calculate active workout calories burned on the fly
             const metadata = exerciseMetadata[type];
             let activeCals = 0;
             if (metadata.isRep) {
@@ -636,7 +1190,6 @@ function startWorkout(type) {
             }
             document.getElementById("overlay-calories").textContent = Math.round(activeCals) + " kcal";
 
-            // If time-based, reflect seconds inside the main counter
             if (!metadata.isRep && type !== "RUNNING") {
                 document.getElementById("counter-value").textContent = state.activeWorkout.durationSeconds;
             }
@@ -651,7 +1204,6 @@ function stopAndSaveWorkout() {
     if (!state.activeWorkout) return;
     clearInterval(state.activeWorkout.timer);
 
-    // Unbind sensors & location
     if (state.activeWorkout.sensorListener) {
         window.removeEventListener("devicemotion", state.activeWorkout.sensorListener);
     }
@@ -667,7 +1219,7 @@ function stopAndSaveWorkout() {
     const calories = exerciseMetadata[type].isRep ? (reps * exerciseMetadata[type].caloriesPerUnit) : (dur * exerciseMetadata[type].caloriesPerUnit);
 
     const session = {
-        id: Date.now(), // Local key
+        id: Date.now(),
         exercise_type: type,
         start_time: state.activeWorkout.startTimestamp,
         end_time: Date.now(),
@@ -684,9 +1236,10 @@ function stopAndSaveWorkout() {
     state.activeWorkout = null;
     document.getElementById("workout-overlay").classList.add("hidden");
     
-    // Refresh display
     renderStreakCard();
     renderGoals();
+    renderHistory();
+    renderStats();
     triggerSync();
 }
 
@@ -705,9 +1258,112 @@ function discardWorkout() {
     document.getElementById("workout-overlay").classList.add("hidden");
 }
 
-// ----------------------------------------------------
-// SUPABASE SYNCHRONIZATION
-// ----------------------------------------------------
+function setupAccelerometer(type) {
+    if (!window.DeviceMotionEvent) return null;
+
+    const config = {
+        SQUAT: { up: 2.5, down: 0.8, debounce: 1000 },
+        CRUNCH: { up: 2.2, down: 0.6, debounce: 1200 },
+        PUSH_UP: { up: 2.0, down: 0.5, debounce: 800 },
+        PULL_UP: { up: 3.0, down: 1.0, debounce: 1200 }
+    }[type] || { up: 2.0, down: 0.5, debounce: 800 };
+
+    let isAboveThreshold = false;
+    let lastRepTime = 0;
+    const alpha = 0.15;
+    const gravity = [0, 0, 0];
+
+    const handleMotionEvent = (event) => {
+        const acc = event.accelerationIncludingGravity || event.acceleration;
+        if (!acc || acc.x === null) return;
+
+        gravity[0] = alpha * gravity[0] + (1 - alpha) * acc.x;
+        gravity[1] = alpha * gravity[1] + (1 - alpha) * acc.y;
+        gravity[2] = alpha * gravity[2] + (1 - alpha) * acc.z;
+
+        const linearX = acc.x - gravity[0];
+        const linearY = acc.y - gravity[1];
+        const linearZ = acc.z - gravity[2];
+
+        const magnitude = Math.sqrt(linearX * linearX + linearY * linearY + linearZ * linearZ);
+        drawMotionWave(magnitude);
+
+        const now = Date.now();
+        if (magnitude > config.up && !isAboveThreshold) {
+            isAboveThreshold = true;
+        } else if (magnitude < config.down && isAboveThreshold) {
+            isAboveThreshold = false;
+            if (now - lastRepTime > config.debounce) {
+                state.activeWorkout.repCount += 1;
+                document.getElementById("counter-value").textContent = state.activeWorkout.repCount;
+                playBeep();
+                lastRepTime = now;
+            }
+        }
+    };
+
+    window.addEventListener("devicemotion", handleMotionEvent);
+    return handleMotionEvent;
+}
+
+function setupGeolocation() {
+    if (!navigator.geolocation) return null;
+    let lastCoords = null;
+    
+    return navigator.geolocation.watchPosition((position) => {
+        const coords = position.coords;
+        if (lastCoords) {
+            const dist = calculateDistance(lastCoords.latitude, lastCoords.longitude, coords.latitude, coords.longitude);
+            state.activeWorkout.distanceKm += dist;
+            document.getElementById("overlay-distance").textContent = state.activeWorkout.distanceKm.toFixed(2) + " km";
+        }
+        lastCoords = coords;
+    }, (err) => {
+        console.error("GPS Watch failed", err);
+    }, {
+        enableHighAccuracy: true,
+        maximumAge: 1000
+    });
+}
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; 
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+let canvasPhase = 0;
+function drawMotionWave(sensorMagnitude) {
+    const canvas = document.getElementById("motion-canvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width = canvas.clientWidth;
+    const height = canvas.height = canvas.clientHeight;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.strokeStyle = "#FF5E3A";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    
+    const amplitude = 5 + Math.min(sensorMagnitude * 3, 25);
+    canvasPhase += 0.1;
+
+    for (let x = 0; x < width; x++) {
+        const y = height / 2 + Math.sin((x / width) * 4 * Math.PI + canvasPhase) * amplitude;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+}
+
+// ==============================================================
+// SUPABASE AUTO SYNC
+// ==============================================================
 async function triggerSync() {
     if (!supabase || state.syncPending) return;
     state.syncPending = true;
@@ -716,7 +1372,6 @@ async function triggerSync() {
     indicator.className = "sync-badge syncing";
 
     try {
-        // 1. Sync Sessions
         const unsyncedSessions = state.sessions.filter(s => s.sync_status === "PENDING");
         for (let s of unsyncedSessions) {
             const remoteObj = {
@@ -729,15 +1384,12 @@ async function triggerSync() {
                 distance_km: s.distance_km,
                 user_id: state.userId
             };
-            const { data, error } = await supabase.from("workout_sessions").insert([remoteObj]).select();
+            const { error } = await supabase.from("workout_sessions").insert([remoteObj]).select();
             if (!error) {
                 s.sync_status = "SYNCED";
-            } else {
-                console.error("Supabase Session Upload Error", error);
             }
         }
 
-        // 2. Sync Goals
         const unsyncedGoals = state.goals.filter(g => g.sync_status === "PENDING");
         for (let g of unsyncedGoals) {
             const remoteObj = {
@@ -746,15 +1398,12 @@ async function triggerSync() {
                 target_value: g.target_value,
                 user_id: state.userId
             };
-            const { data, error } = await supabase.from("daily_goals").insert([remoteObj]).select();
+            const { error } = await supabase.from("daily_goals").insert([remoteObj]).select();
             if (!error) {
                 g.sync_status = "SYNCED";
-            } else {
-                console.error("Supabase Goal Upload Error", error);
             }
         }
 
-        // Update local cache
         localStorage.setItem("saitama_sessions", JSON.stringify(state.sessions));
         localStorage.setItem("saitama_goals", JSON.stringify(state.goals));
 
@@ -768,20 +1417,18 @@ async function triggerSync() {
     }
 }
 
-// ----------------------------------------------------
+// ==============================================================
 // EVENT LISTENERS & SETUP
-// ----------------------------------------------------
+// ==============================================================
 function init() {
     // Navigation Tabs
     document.querySelectorAll(".nav-tab").forEach(tab => {
         tab.addEventListener("click", () => {
             const targetTab = tab.dataset.tab;
             
-            // Toggle view visibility
             document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
             document.getElementById(targetTab).classList.add("active");
             
-            // Toggle bottom navigation active state
             document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
             
@@ -797,7 +1444,7 @@ function init() {
         updateLocalization();
     });
 
-    // Open Add Goal Modal
+    // Add Goal Dialog Modal
     document.getElementById("btn-add-goal").addEventListener("click", () => {
         document.getElementById("goal-input").value = "";
         document.getElementById("goal-modal").classList.remove("hidden");
@@ -810,7 +1457,7 @@ function init() {
         document.getElementById("goal-modal").classList.add("hidden");
     });
 
-    // Add Goal Selector type toggling
+    // Goal selector type buttons
     document.querySelectorAll(".exercise-btn-select").forEach(btn => {
         btn.addEventListener("click", () => {
             document.querySelectorAll(".exercise-btn-select").forEach(b => b.classList.remove("active"));
@@ -823,12 +1470,9 @@ function init() {
     document.getElementById("btn-goal-save").addEventListener("click", () => {
         const type = document.querySelector(".exercise-btn-select.active").dataset.type;
         const val = parseInt(document.getElementById("goal-input").value);
-        
         if (!val || val <= 0) return;
         
         const today = getTodayDateString();
-        
-        // Remove prior goal of same exercise for today
         state.goals = state.goals.filter(g => !(g.date_string === today && g.exercise_type === type));
 
         const goal = {
@@ -857,17 +1501,16 @@ function init() {
     document.getElementById("btn-saitama-challenge").addEventListener("click", () => {
         const today = getTodayDateString();
         const challenge = {
-            SQUAT: 100,
+            AI_SQUAT: 100,
+            AI_BICEP_CURL: 100,
             CRUNCH: 100,
             PUSH_UP: 100,
-            RUNNING: 10000, // 10km (10000m)
+            RUNNING: 10000,
             PULL_UP: 50,
-            PLANK: 300 // 5m
+            PLANK: 300
         };
 
-        // Filter out prior goals for today
         state.goals = state.goals.filter(g => g.date_string !== today);
-
         Object.keys(challenge).forEach(type => {
             state.goals.push({
                 id: Date.now() + Math.random(),
@@ -889,17 +1532,16 @@ function init() {
         triggerSync();
     });
 
-    // Exercise Selection details modal triggers
-    document.querySelectorAll(".exercise-card").forEach(card => {
+    // Sensor Workout Selection Cards
+    document.querySelectorAll(".exercise-card[data-exercise]").forEach(card => {
         card.addEventListener("click", () => {
             const exerciseType = card.dataset.exercise;
             const t = translations[state.lang];
             
-            document.getElementById("modal-title").textContent = t["ex_" + exerciseType.toLowerCase()];
-            document.getElementById("modal-guide-text").textContent = t["guide_" + exerciseType.toLowerCase()];
+            document.getElementById("modal-title").textContent = t["ex_" + exerciseType.toLowerCase()] || exerciseType;
+            document.getElementById("modal-guide-text").textContent = t["guide_" + exerciseType.toLowerCase()] || "";
             document.getElementById("btn-modal-start").dataset.exercise = exerciseType;
 
-            // iOS Web permission check display
             const sensorBox = document.getElementById("sensor-request-box");
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                 sensorBox.classList.remove("hidden");
@@ -915,7 +1557,6 @@ function init() {
         document.getElementById("info-modal").classList.add("hidden");
     });
 
-    // Request permissions manually for iOS if needed
     document.getElementById("btn-grant-sensors").addEventListener("click", () => {
         if (typeof DeviceMotionEvent.requestPermission === 'function') {
             DeviceMotionEvent.requestPermission()
@@ -928,13 +1569,12 @@ function init() {
         }
     });
 
-    // Start workout from Info Modal
     document.getElementById("btn-modal-start").addEventListener("click", (e) => {
         const type = e.target.dataset.exercise;
         startWorkout(type);
     });
 
-    // Overlay Finish / Discard controllers
+    // Accelerometer Workout Finish / Discard
     document.getElementById("btn-overlay-finish").addEventListener("click", () => {
         stopAndSaveWorkout();
     });
@@ -945,12 +1585,64 @@ function init() {
         }
     });
 
-    // Initialize display content
+    // AI Camera HUD Controls
+    document.getElementById("btn-ai-back").addEventListener("click", () => {
+        if (confirm(state.lang === 'vi' ? 'Bạn muốn thoát buổi tập AI này?' : 'Do you want to exit this AI workout?')) {
+            closeAiWorkout();
+        }
+    });
+
+    // Switch Camera Front / Back
+    document.getElementById("btn-ai-switch-camera").addEventListener("click", async () => {
+        aiFacingMode = aiFacingMode === 'user' ? 'environment' : 'user';
+        document.getElementById("ai-loading-overlay").classList.remove("hidden");
+        try {
+            await startCameraStream();
+        } catch (e) {
+            console.error("Camera flip error", e);
+        }
+    });
+
+    // Voice Speech Toggle
+    document.getElementById("btn-ai-voice").addEventListener("click", () => {
+        aiIsVoiceEnabled = !aiIsVoiceEnabled;
+        const btn = document.getElementById("btn-ai-voice");
+        btn.classList.toggle("active", aiIsVoiceEnabled);
+        btn.innerHTML = `<i class="fa-solid ${aiIsVoiceEnabled ? 'fa-volume-high' : 'fa-volume-xmark'}"></i>`;
+    });
+
+    // Pause / Resume AI Workout
+    document.getElementById("btn-ai-pause").addEventListener("click", () => {
+        isAiPaused = !isAiPaused;
+        const btn = document.getElementById("btn-ai-pause");
+        if (isAiPaused) {
+            btn.innerHTML = '<i class="fa-solid fa-play"></i> Tiếp tục';
+            setAiFeedback(state.lang === 'vi' ? 'Buổi tập đang tạm dừng' : 'Workout paused', 'warning');
+        } else {
+            btn.innerHTML = '<i class="fa-solid fa-pause"></i> Tạm dừng';
+        }
+    });
+
+    // Finish AI Workout
+    document.getElementById("btn-ai-finish").addEventListener("click", () => {
+        finishAiWorkout();
+    });
+
+    // Bicep Curl Arm Selector Buttons (Both, Right, Left)
+    document.querySelectorAll(".arm-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".arm-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            aiSelectedArm = btn.dataset.arm;
+        });
+    });
+
+    // Initial render
     updateLocalization();
     triggerSync();
 }
 
-// Safely execute init after DOM is parsed to avoid race conditions
+// Safely execute init after DOM is parsed
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
 } else {
