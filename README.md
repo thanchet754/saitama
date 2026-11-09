@@ -1,44 +1,38 @@
-# Saitama AI Workout - Web App Đếm Khung Xương (AI Pose Skeleton)
+# AI Pose Fitness - Đếm Squat & Gập Tạ Bằng Khung Xương AI
 
-Ứng dụng Web PWA hỗ trợ đếm số lần và thời gian tập luyện tự động bằng **AI nhận diện khung xương thời gian thực qua Camera (Google MediaPipe Pose)** và cảm biến gia tốc / GPS.
-
----
-
-## 🌟 Tính Năng Mới: AI Camera Khung Xương (Skeleton Tracking)
-
-### 1. 🏋️‍♂️ Đếm Squat (Đứng lên ngồi xuống)
-- **Cơ chế**: AI nhận diện các khớp mốc cơ thể: Hông (Hip) - Đầu gối (Knee) - Cổ chân (Ankle).
-- **Tính toán góc**: Tự động đo góc gập của khớp đầu gối (`Knee Angle`) theo thời gian thực và vẽ trực tiếp số đo góc ngay trên khớp gối.
-- **Quy chuẩn Rep**:
-  - Đứng thẳng: góc > 160° (`UP`)
-  - Ngồi xổm chuẩn sâu: góc <= 95° (`DOWN`)
-  - Chuyển từ `UP` -> `DOWN` -> đứng thẳng `UP`: **Tự động tăng +1 Rep!**
-- **Form Feedback**: Cảnh báo tức thì nếu ngồi chưa đủ sâu hoặc đứng chưa thẳng người.
-
-### 2. 💪 Đếm Gập Tạ Tay (Bicep Curl)
-- **Cơ chế**: AI nhận diện các khớp mốc cơ thể: Vai (Shoulder) - Khuỷu tay (Elbow) - Cổ tay (Wrist).
-- **Tính toán góc**: Đo góc gập của khuỷu tay (`Elbow Angle`) và hiển thị góc động.
-- **Tùy chọn tay**: Hỗ trợ chọn **Tay Phải**, **Tay Trái** hoặc **Cả 2 Tay (Dual Arms)**.
-- **Quy chuẩn Rep**:
-  - Duỗi thẳng tay hạ tạ: góc > 150° (`DOWN`)
-  - Gập tạ đạt đỉnh co cơ: góc <= 48° (`UP`)
-  - Chuyển từ `DOWN` -> `UP` -> duỗi thẳng `DOWN`: **Tự động tăng +1 Rep!**
-- **Form Feedback**: Nhắc nhở gập sát đỉnh hoặc hạ tạ có kiểm soát.
+Web App chuyên biệt ứng dụng trí tuệ nhân tạo (Google MediaPipe Pose) để **đếm số lần Squat** và **đếm số lần Gập tạ tay (Bicep Curl)** tự động theo thời gian thực qua Camera.
 
 ---
 
-## 🚀 Các Điểm Nổi Bật Khác
-- **Hiệu ứng Neon Cyberpunk**: Khung xương phát sáng màu Cyan / Cam Neon tuyệt đẹp.
-- **Âm thanh & Giọng đọc số Rep**: Tự động đọc số bằng giọng nói tiếng Việt ("Một", "Hai", "Ba"...) và tiếng beep qua Web Speech API & Web Audio API.
-- **Thanh đo góc & tiến độ (Gauge Bar)**: Thanh phần trăm trực quan giúp bạn biết mình đã gập/ngồi bao nhiêu % mục tiêu.
-- **Đổi Camera Trước / Sau**: Dễ dàng chuyển đổi giữa camera selfie (tự động lật gương) và camera sau.
-- **Đồng bộ Supabase**: Tự động đồng bộ lịch sử tập luyện và mục tiêu lên database đám mây.
+## 🚀 Tính Năng Chính
+
+### 1. 🏋️‍♂️ Đếm Squat AI (Đứng lên ngồi xuống)
+- Nhận diện khớp hông, đầu gối, cổ chân.
+- Đo góc gập đầu gối và hiển thị góc động ngay trên cơ thể.
+- Đứng thẳng (> 160°) -> Ngồi xổm sâu (<= 95°) -> Đứng thẳng dậy: **Tự động tăng +1 Rep!**
+- Lời nhắc tư thế thông minh: báo khi chưa hạ đủ độ sâu hoặc đứng chưa thẳng.
+
+### 2. 💪 Đếm Gập Tạ Tay AI (Bicep Curl)
+- Nhận diện khớp vai, khuỷu tay, cổ tay.
+- Hỗ trợ chọn: **Cả 2 tay**, **Tay phải** hoặc **Tay trái**.
+- Duỗi tay thẳng (> 150°) -> Gập tạ lên đỉnh (<= 48°) -> Hạ tạ duỗi thẳng: **Tự động tăng +1 Rep!**
+
+### 3. 🎯 Trải Nghiệm Người Dùng
+- **Giao diện tối giản, bấm là ăn ngay**, không có modal hay lớp phủ che màn hình.
+- **Khung xương Neon Cyberpunk** phát sáng đẹp mắt.
+- **Âm thanh giọng đọc tiếng Việt**: Tự động đếm "Một", "Hai", "Ba"... bằng Web Speech API và âm thanh beep chuẩn xác.
+- **Đổi camera trước / sau** thuận tiện trên cả điện thoại di động và máy tính.
+- **Thống kê buổi tập**: Số rep, thời gian tập, calo tiêu hao, độ chuẩn form.
 
 ---
 
-## 🛠️ Hướng Dẫn Sử Dụng
-1. Mở trang web trên trình duyệt điện thoại hoặc máy tính (Khuyên dùng Chrome hoặc Safari).
-2. Tại màn hình chính hoặc mục **Tập luyện**, bấm vào **Squat AI** hoặc **Gập tạ tay AI**.
-3. Cho phép quyền truy cập Camera khi trình duyệt yêu cầu.
-4. Đứng hoặc ngồi lùi xa camera khoảng 1.5m - 2m để camera nhìn thấy rõ cơ thể.
-5. Bắt đầu tập luyện, AI sẽ tự động vẽ khung xương và đếm rep cho bạn!
+## 💻 Cách Khởi Chạy
+
+### Chạy trực tiếp trên máy:
+```bash
+python -m http.server 8000
+```
+Mở trình duyệt: `http://localhost:8000`
+
+### Triển khai (Deploy):
+Upload thư mục này lên GitHub, Vercel, Netlify hoặc GitHub Pages là có thể chạy ngay với giao thức HTTPS!
