@@ -398,12 +398,11 @@ function renderProgramPanel() {
     const st = bodyStats(profile);
     $('profile-strip').innerHTML = `
         <div class="ps-stats">
-            <span><b>${profile.height_cm}</b> cm</span><span><b>${profile.weight_kg}</b> kg</span>
+            <span><b>${profile.weight_kg}</b> kg</span>
             <span>BMI <b>${st.bmi}</b> <em class="${st.cat.cls}">${st.cat.name}</em></span>
-            <span><i class="fa-solid ${GOALS[profile.goal].icon}"></i> ${GOALS[profile.goal].name}</span>
             <span class="ps-streak" title="Chuỗi ngày tập liên tiếp"><i class="fa-solid fa-fire-flame-curved"></i> ${streakDays()} ngày</span>
         </div>
-        <button class="ps-edit" onclick="openProfileModal(false)"><i class="fa-solid fa-user-pen"></i> Hồ sơ</button>`;
+        <button class="ps-edit" onclick="openProfileModal(false)" aria-label="Sửa hồ sơ" title="Sửa hồ sơ"><i class="fa-solid fa-user-pen"></i></button>`;
 
     const plan = buildDailyPlan(profile);
     const done = doneToday('daily');
@@ -414,9 +413,7 @@ function renderProgramPanel() {
                 <span class="tc-day">${plan.dayName} · Giáo án hôm nay</span>
                 <h3>${plan.title}</h3>
                 <div class="tc-meta"><span><i class="fa-regular fa-clock"></i> ~${fmtMin(plan.seconds)}</span>
-                    <span><i class="fa-solid fa-fire"></i> ~${plan.kcal} kcal</span>
-                    <span><i class="fa-solid fa-list"></i> ${plan.exCount} bài</span>
-                    <span>${LEVELS[profile.level].name}</span></div>
+                    <span><i class="fa-solid fa-fire"></i> ~${plan.kcal} kcal</span></div>
             </div>
             ${done ? '<span class="tc-done"><i class="fa-solid fa-circle-check"></i> Đã xong</span>' : ''}
         </div>
@@ -429,7 +426,7 @@ function renderProgramPanel() {
         <div class="hc-head"><h3><i class="fa-solid fa-fire-flame-curved"></i> Đốt mỡ nhanh (HIIT)</h3>
             ${doneToday('hiit') ? '<span class="tc-done"><i class="fa-solid fa-circle-check"></i> Hôm nay</span>' : ''}</div>
         <div class="hc-options">${HIIT_OPTIONS.map(m => `<button class="${m === hiitMinutes ? 'active' : ''}" onclick="selectHiit(${m})">${m} phút</button>`).join('')}</div>
-        <p class="hc-desc">${hiit.exCount} bài luân phiên · ${hiit.work}s tập / ${hiit.rest}s nghỉ · ~<b>${hiit.kcal} kcal</b> với ${profile.weight_kg} kg</p>
+        <p class="hc-desc">${hiit.work}s tập / ${hiit.rest}s nghỉ · ~<b>${hiit.kcal} kcal</b></p>
         <details class="tc-list"><summary>Xem các bài</summary><ul>${planListHtml(hiit)}</ul></details>
         <button class="btn btn-secondary tc-start" onclick="startHiitPlan()"><i class="fa-solid fa-bolt"></i> <span>BẮT ĐẦU ${hiitMinutes} PHÚT</span></button>`;
 }
@@ -461,9 +458,8 @@ const Runner = {
         $('runner-live').hidden = false;
         $('runner-title').textContent = `${plan.title} · ~${fmtMin(plan.seconds)}`;
         setMode('camera');
-        $('camera-stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (!isCameraActive) await startCamera();
-        if (!isCameraActive) { showToast('Cần bật camera để tập theo giáo án.', 'error'); this.stop(true); return; }
+        if (!isCameraActive) { this.stop(true); return; }
         clearInterval(this.timer);
         this.timer = setInterval(() => this.tick(), 250);
         this.next();
@@ -483,6 +479,7 @@ const Runner = {
     quit() {
         this.stop(false);
         $('runner-panel').hidden = true;
+        if (isCameraActive) stopCamera();
         showToast('Đã dừng buổi tập. Các bài đã tập vẫn được lưu.', 'info');
     },
 
@@ -625,8 +622,10 @@ const Runner = {
         const elapsed = Math.floor((Date.now() - this.startedAt) / 1000);
         const plan = this.plan;
         this.stop(false);
+        if (isCameraActive) stopCamera(); // leave the full-screen view
         markCompleted(plan.kind);
         $('runner-panel').hidden = false;
+        setTimeout(() => $('runner-panel').scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
         $('runner-live').hidden = true;
         $('runner-summary').hidden = false;
         $('runner-summary-text').innerHTML = `<b>${plan.title}</b> · ${formatTime(elapsed)} · ~${plan.kcal} kcal · ${plan.exCount} bài<br>

@@ -1825,3 +1825,193 @@ body.runner-on .exercise-picker { display: none !important; }
     .controls-panel .btn-secondary span, .controls-panel .btn-outline span { display: none; }
 }
 
+/* ============================================================== */
+/* FOCUS LAYOUT                                                    */
+/* Home = pick & start. Training = full-screen camera, nothing else */
+/* ============================================================== */
+
+/* Header: no status pill when idle, account tucked into a menu */
+.status-badge.ready { display: none; }
+.header-actions { position: relative; }
+.theme-toggle[hidden] { display: none; }
+.account-bar {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 70;
+    flex-direction: column; align-items: stretch; gap: 10px;
+    min-width: 220px; max-width: 80vw; padding: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+.account-bar:not(.open) { display: none; }
+.account-user #account-email { color: var(--text-white); }
+.account-logout { height: 36px; }
+
+/* Home: no camera box, no live stats; one sticky start button */
+.stats-panel { display: none !important; }
+body:not(.workout-on) #camera-stage,
+body:not(.workout-on) .controls-panel > :not(#btn-toggle-camera) { display: none !important; }
+body:not(.workout-on) .controls-panel {
+    display: block;
+    position: sticky;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    z-index: 40;
+}
+body:not(.workout-on) #btn-toggle-camera { width: 100%; height: 56px; font-size: 15px; letter-spacing: 0.3px; }
+body.runner-on:not(.workout-on) .controls-panel { display: none; }
+
+.profile-strip { flex-wrap: nowrap; padding: 8px 10px 8px 14px; }
+.ps-edit { width: 36px; height: 36px; padding: 0; border-radius: 50%; flex-shrink: 0; font-size: 14px; }
+
+.guide-plain { background: none; border: 0; }
+.guide-plain ul { margin: 0; }
+
+/* ---------- Training: full-screen, fixed, no scrolling ---------- */
+body.workout-on { overflow: hidden; touch-action: none; }
+body.workout-on .camera-stage {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: #000;
+}
+body.workout-on .output-canvas { object-fit: cover; }
+@media (min-width: 821px) {
+    body.workout-on .output-canvas { object-fit: contain; }
+}
+body.workout-on .camera-placeholder { display: none !important; }
+[data-theme="light"] body.workout-on .camera-loader { background: rgba(13, 14, 18, 0.92); }
+[data-theme="light"] body.workout-on .camera-loader p { color: #FFF; }
+
+/* Top: exercise + time */
+.ws-top { display: none; }
+body.workout-on .ws-top {
+    display: flex;
+    justify-content: center;
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 18px);
+    left: 70px;
+    right: 70px;
+    z-index: 12;
+    pointer-events: none;
+}
+.ws-chip {
+    background: rgba(13, 14, 18, 0.55);
+    backdrop-filter: blur(8px);
+    color: #FFF;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 8px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    font-variant-numeric: tabular-nums;
+}
+body.workout-on .rec-indicator {
+    top: calc(env(safe-area-inset-top) + 62px);
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Floating round buttons over the camera */
+body.workout-on .controls-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    display: block;
+    pointer-events: none;
+}
+body.workout-on .controls-panel .btn,
+body.workout-on #btn-toggle-camera {
+    position: absolute;
+    pointer-events: auto;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    flex-direction: row;
+    gap: 0;
+    font-size: 18px;
+    color: #FFF;
+    background: rgba(13, 14, 18, 0.55);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: none;
+}
+body.workout-on .controls-panel .btn span { display: none; }
+body.workout-on .controls-panel .btn i { font-size: 18px; }
+body.workout-on #btn-toggle-camera { top: calc(env(safe-area-inset-top) + 12px); left: 12px; }
+body.workout-on #btn-flip-camera { top: calc(env(safe-area-inset-top) + 12px); right: 12px; }
+body.workout-on #btn-toggle-voice { top: calc(env(safe-area-inset-top) + 68px); right: 12px; }
+body.workout-on #btn-record { top: calc(env(safe-area-inset-top) + 124px); right: 12px; }
+body.workout-on #btn-reset-counter { bottom: calc(env(safe-area-inset-bottom) + 20px); right: 12px; }
+body.workout-on #btn-toggle-voice:not(.active) { color: rgba(255, 255, 255, 0.5); }
+body.workout-on .btn-record.recording { background: rgba(255, 59, 48, 0.3); border-color: #FF3B30; }
+
+/* HUD: big count bottom-left, short feedback above it, nothing else */
+body.workout-on .stage-hud {
+    justify-content: flex-end;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0 76px calc(env(safe-area-inset-bottom) + 18px) 16px;
+}
+body.workout-on .hud-gauge-card { display: none; }
+body.workout-on .hud-feedback-pill { order: 1; align-self: flex-start; max-width: 100%; font-size: 13px; }
+body.workout-on .hud-rep-card {
+    order: 2;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    padding: 0;
+    align-items: flex-start;
+}
+body.workout-on .hud-rep-val { font-size: 96px; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.7); }
+body.workout-on .hud-label { font-size: 12px; color: #FFF; opacity: 0.85; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+
+/* Guided workout inside the full-screen view: compact card at the bottom */
+body.workout-on.runner-on .ws-top,
+body.workout-on.runner-on .hud-rep-card,
+body.workout-on.runner-on #btn-reset-counter { display: none; }
+body.workout-on.runner-on .stage-hud { padding-bottom: calc(env(safe-area-inset-bottom) + 190px); padding-right: 16px; }
+body.workout-on .runner-panel {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(env(safe-area-inset-bottom) + 10px);
+    z-index: 96;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 12px 14px;
+    background: rgba(13, 14, 18, 0.72);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: none;
+    color: #FFF;
+}
+body.workout-on #runner-live { gap: 8px; }
+body.workout-on #runner-title,
+body.workout-on .runner-next { display: none; }
+body.workout-on .runner-top { color: rgba(255, 255, 255, 0.7); }
+body.workout-on .runner-progress { background: rgba(255, 255, 255, 0.15); }
+body.workout-on .runner-ex { color: #FFF; }
+body.workout-on .runner-sub { color: rgba(255, 255, 255, 0.7); }
+body.workout-on .runner-count { color: #FFF; font-size: 44px; }
+body.workout-on .runner-actions { grid-template-columns: 1fr 1fr; }
+body.workout-on .runner-actions .btn-outline { display: none; } /* quit = the ✕ button */
+body.workout-on .runner-actions .btn {
+    height: 42px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #FFF;
+}
+

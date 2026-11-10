@@ -181,8 +181,10 @@ window.selectExercise = function (type) {
 
     jointLabelEl.textContent = cfg.jointLabel;
     targetTextEl.textContent = `Chuẩn: ${cfg.dir === 'down' ? '<' : '>'} ${cfg.target}°`;
-    $('hud-rep-label').textContent = cfg.mode === 'hold' ? 'SỐ GIÂY' : 'SỐ LẦN (REPS)';
+    $('hud-rep-label').textContent = cfg.mode === 'hold' ? 'GIÂY' : 'REPS';
+    $('ws-ex-name').textContent = cfg.name;
     renderGuide(cfg);
+    updateStartButton();
 
     resetCounter();
 };
@@ -227,17 +229,52 @@ async function getPoseModel() {
 }
 
 window.toggleCamera = async function () {
-    if (isStarting) return;
+    if (isStarting) { // cancel while the camera / AI is still loading
+        loopToken++;
+        stopStream();
+        loaderEl.style.display = 'none';
+        exitWorkoutView();
+        return;
+    }
     if (!sbUserId && !isCameraActive) {
         showAuth('login');
         return;
     }
     if (isCameraActive) {
-        stopCamera();
+        if (window.Runner && Runner.active) Runner.quit(); // also turns the camera off
+        else stopCamera();
     } else {
         await startCamera();
     }
 };
+
+// ---------- Full-screen, distraction-free workout view ----------
+function updateStartButton() {
+    if (isCameraActive || isStarting) return;
+    const name = EXERCISES[currentExercise] ? EXERCISES[currentExercise].name : '';
+    btnToggleCamera.innerHTML = `<i class="fa-solid fa-play"></i> <span>BẮT ĐẦU TẬP${name ? ' · ' + name.toUpperCase() : ''}</span>`;
+}
+
+const isPhoneLike = () => window.matchMedia('(pointer: coarse)').matches;
+
+function enterWorkoutView() {
+    if (document.body.classList.contains('workout-on')) return;
+    document.body.classList.add('workout-on');
+    window.scrollTo(0, 0);
+    // Phones (browser only): hide the address bar and keep the current orientation
+    if (isPhoneLike() && !NativeApp.isNative && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+            .then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock(screen.orientation.type).catch(() => {}))
+            .catch(() => {});
+    }
+}
+
+function exitWorkoutView() {
+    if (!document.body.classList.contains('workout-on')) return;
+    document.body.classList.remove('workout-on');
+    try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch (e) {}
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+}
 
 function cameraErrorMessage(err) {
     if (!window.isSecureContext) return 'Camera chỉ hoạt động trên HTTPS hoặc localhost.';
@@ -258,6 +295,8 @@ function cameraErrorMessage(err) {
 async function startCamera() {
     isStarting = true;
     const myToken = ++loopToken; // stops any previous loop
+    enterWorkoutView();
+    hudEl.style.display = 'none';
     loaderEl.style.display = 'flex';
     placeholderEl.style.display = 'none';
     loaderTextEl.textContent = 'Đang nạp Camera & Khung Xương AI...';
@@ -271,31 +310,33 @@ async function startCamera() {
         stopStream();
 
         loaderTextEl.textContent = 'Đang mở Camera...';
-        // Portrait phones (9:16) get a portrait 3:4 stream, desktops 4:3
+        // Full-screen view: ask for a stream shaped like the screen (9:16 on a portrait
+        // phone) so it fills the display with as little cropping as possible
         const portrait = isPortraitScreen();
         activeMediaStream = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: currentFacingMode,
-                width: { ideal: portrait ? 720 : 960 },
-                height: { ideal: portrait ? 960 : 720 },
-                aspectRatio: { ideal: portrait ? 3 / 4 : 4 / 3 }
+                width: { ideal: portrait ? 720 : 1280 },
+                height: { ideal: portrait ? 1280 : 720 },
+                aspectRatio: { ideal: portrait ? 9 / 16 : 16 / 9 }
             },
             audio: false
         });
+        if (myToken !== loopToken) { stopStream(); return; } // cancelled meanwhile
         videoEl.srcObject = activeMediaStream;
         await videoEl.play();
 
         syncCanvasSize();
 
         await getPoseModel();
-        if (myToken !== loopToken) return; // superseded by another start/stop
+        if (myToken !== loopToken) { stopStream(); return; } // cancelled / superseded
 
         isCameraActive = true;
         if (repCount === 0) sessionId = Date.now(); // session starts when training starts
         loaderEl.style.display = 'none';
         hudEl.style.display = 'flex';
 
-        btnToggleCamera.innerHTML = '<i class="fa-solid fa-stop"></i> <span>TẮT CAMERA / DỪNG</span>';
+        btnToggleCamera.innerHTML = '<i class="fa-solid fa-xmark"></i> <span>Thoát</span>';
         btnToggleCamera.classList.add('running');
 
         statusBadgeEl.className = 'status-badge running';
@@ -312,9 +353,10 @@ async function startCamera() {
         stopStream();
         isCameraActive = false;
         loaderEl.style.display = 'none';
-        showPlaceholder('Không Mở Được Camera', cameraErrorMessage(err), true);
-        statusBadgeEl.className = 'status-badge error';
-        statusTextEl.textContent = 'Lỗi Camera';
+        if (myToken === loopToken) {
+            exitWorkoutView();
+            showToast(cameraErrorMessage(err), 'error');
+        }
     } finally {
         isStarting = false;
     }
@@ -337,13 +379,13 @@ function stopCamera() {
     releaseWakeLock();
     saveSession();
 
-    showPlaceholder('Camera Đang Tắt', 'Bấm nút <strong>"BẬT CAMERA & BẮT ĐẦU"</strong> bên dưới để AI tự động vẽ khung xương và đếm số rep cho bạn!');
     hudEl.style.display = 'none';
     canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
     stageEl.style.removeProperty('--stage-ratio');
 
-    btnToggleCamera.innerHTML = '<i class="fa-solid fa-play"></i> <span>BẬT CAMERA & BẮT ĐẦU</span>';
     btnToggleCamera.classList.remove('running');
+    updateStartButton();
+    exitWorkoutView();
 
     statusBadgeEl.className = 'status-badge ready';
     statusTextEl.textContent = 'AI Đã Sẵn Sàng';
@@ -382,6 +424,7 @@ window.resetCounter = function () {
 
     repNumberEl.textContent = '0';
     statTimeEl.textContent = '00:00';
+    $('ws-time').textContent = '00:00';
     statCalsEl.textContent = '0 kcal';
     statAccuracyEl.textContent = '--';
     gaugeFillEl.style.width = '0%';
@@ -479,7 +522,7 @@ function renderPoseFrame(results) {
     canvasCtx.restore();
 
     if (!results.poseLandmarks) {
-        setFeedback('Không phát hiện người! Hãy đứng trước camera', 'ready');
+        setFeedback('Đứng vào khung hình', 'ready');
         return;
     }
 
@@ -649,6 +692,7 @@ function startTimer() {
     timerInterval = setInterval(() => {
         durationSeconds++;
         statTimeEl.textContent = formatTime(durationSeconds);
+        $('ws-time').textContent = formatTime(durationSeconds);
     }, 1000);
 }
 
@@ -815,6 +859,14 @@ window.signInWithGoogle = async function () {
     if (error) setAuthMessage(translateAuthError(error));
 };
 
+window.toggleAccountMenu = function () {
+    accountBarEl.classList.toggle('open');
+};
+document.addEventListener('click', (e) => {
+    if (!accountBarEl.classList.contains('open')) return;
+    if (!e.target.closest('#account-bar, #account-btn')) accountBarEl.classList.remove('open');
+});
+
 window.signOut = async function () {
     if (isCameraActive) stopCamera(); // also saves the current session
     else saveSession();
@@ -826,6 +878,8 @@ function onUserChanged(user) {
     sbUser = user;
     sbUserId = user ? user.id : null;
 
+    $('account-btn').hidden = !user;
+    accountBarEl.classList.remove('open');
     if (user) {
         accountEmailEl.textContent = user.email || 'Tài khoản';
         accountBarEl.hidden = false;

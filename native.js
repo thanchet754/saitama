@@ -87,6 +87,8 @@ const NativeApp = (() => {
                 const recModal = document.getElementById('rec-modal');
                 const actModal = document.getElementById('act-modal');
                 if (recModal && !recModal.hidden) { closeRecModal(); return; }
+                // Back while training = leave the full-screen workout
+                if (document.body.classList.contains('workout-on')) { toggleCamera(); return; }
                 if (actModal && !actModal.hidden) {
                     if (typeof modalMode !== 'undefined' && modalMode === 'finish') return; // must choose Save / Discard
                     closeActModal();

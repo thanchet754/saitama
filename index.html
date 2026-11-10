@@ -66,14 +66,16 @@
                 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Đổi nền sáng / tối" title="Đổi nền sáng / tối">
                     <i class="fa-solid fa-moon theme-icon"></i>
                 </button>
+                <button id="account-btn" class="theme-toggle" onclick="toggleAccountMenu()" aria-label="Tài khoản" title="Tài khoản" hidden>
+                    <i class="fa-solid fa-circle-user"></i>
+                </button>
+                <!-- Signed-in account menu -->
+                <div id="account-bar" class="account-bar" hidden>
+                    <span class="account-user"><i class="fa-solid fa-circle-user"></i> <span id="account-email"></span></span>
+                    <button class="account-logout" onclick="signOut()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+                </div>
             </div>
         </header>
-
-        <!-- Signed-in account bar -->
-        <div id="account-bar" class="account-bar" hidden>
-            <span class="account-user"><i class="fa-solid fa-circle-user"></i> <span id="account-email"></span></span>
-            <button class="account-logout" onclick="signOut()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
-        </div>
 
         <!-- Shown while there is no internet connection -->
         <div id="offline-bar" class="offline-bar" role="status" aria-live="polite" hidden>
@@ -233,6 +235,9 @@
                 <span>Vui lòng cấp quyền truy cập Camera khi trình duyệt hỏi</span>
             </div>
 
+            <!-- Full-screen workout: exercise name + time -->
+            <div class="ws-top"><span class="ws-chip"><span id="ws-ex-name">Squat</span> · <span id="ws-time">00:00</span></span></div>
+
             <!-- Real-time HUD elements floating on Canvas -->
             <div id="stage-hud" class="stage-hud" style="display: none;">
                 <!-- Rep Counter -->
@@ -310,7 +315,7 @@
         <!-- Main Action Controls -->
         <section class="controls-panel">
             <button id="btn-toggle-camera" class="btn btn-primary" onclick="toggleCamera()">
-                <i class="fa-solid fa-play"></i> <span>BẬT CAMERA & BẮT ĐẦU</span>
+                <i class="fa-solid fa-play"></i> <span>BẮT ĐẦU TẬP</span>
             </button>
 
             <button id="btn-flip-camera" class="btn btn-secondary" onclick="flipCamera()" title="Đổi camera trước / sau">
@@ -381,11 +386,13 @@
             <ul id="history-list" class="history-list"></ul>
         </section>
 
-        <!-- Instructions Card -->
-        <section class="guide-panel">
-            <h3><i class="fa-solid fa-lightbulb"></i> Mẹo Đạt Chuẩn AI</h3>
-            <ul id="guide-list"></ul>
-        </section>
+        <!-- Instructions (collapsed) -->
+        <details class="rec-settings">
+            <summary><i class="fa-solid fa-lightbulb"></i> Mẹo đặt camera <i class="fa-solid fa-chevron-down rec-chevron"></i></summary>
+            <div class="rec-settings-body guide-panel guide-plain">
+                <ul id="guide-list"></ul>
+            </div>
+        </details>
 
         </div><!-- /mode-camera -->
 
