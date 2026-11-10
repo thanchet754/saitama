@@ -1,0 +1,95 @@
+name: Android APK
+
+# Builds the Saitama Android shell and publishes it as a GitHub Release.
+# Only needed when the native shell (app/) changes - normal web changes
+# are picked up by the app automatically from Vercel.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Sync Capacitor
+        working-directory: app
+        run: npx cap sync android
+
+      - name: Check signing secrets
+        id: keys
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS" ]; then
+            echo "::warning::No signing key yet. Run setup-android-key.bat once on your PC, then re-run this workflow."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Decode keystore
+        if: steps.keys.outputs.ok == 'true'
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build release APK
+        if: steps.keys.outputs.ok == 'true'
+        working-directory: app/android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/saitama.apk"
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      - name: Publish release
+        if: steps.keys.outputs.ok == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-build-${{ github.run_number }}
+          name: Saitama Android (build ${{ github.run_number }})
+          make_latest: true
+          files: ${{ runner.temp }}/saitama.apk
+          body: |
+            Cài đặt: tải **saitama.apk** trên điện thoại Android rồi mở file để cài.
+            Link luôn trỏ tới bản mới nhất: https://github.com/thanchet754/saitama/releases/latest/download/saitama.apk
+
+            App tải giao diện trực tiếp từ https://saitama-liart.vercel.app nên mọi cập nhật web có ngay, không cần cài lại.
