@@ -2,84 +2,119 @@
 // AI POSE FITNESS - LOGIC CONTROLLER (MediaPipe Skeleton AI)
 // ==============================================================
 
-// App Configuration & State
-let currentExercise = 'SQUAT'; // 'SQUAT' or 'CURL'
+const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
+const HISTORY_KEY = 'aiPoseFitness.history';
+const HISTORY_LIMIT = 20;
+const VIS_THRESHOLD = 0.4;
+
+// Exercise configuration (thresholds in degrees)
+const EXERCISES = {
+    SQUAT: {
+        name: 'Squat',
+        jointLabel: 'Góc đầu gối',
+        top: 160,        // standing straight
+        target: 95,      // deep enough to count
+        perfect: 90,     // "perfect depth" for form score
+        gaugeStart: 170,
+        restLabel: 'UP (ĐỨNG)',
+        activeLabel: 'DOWN (ĐẠT)',
+        kcalPerRep: 0.35
+    },
+    CURL: {
+        name: 'Gập tạ',
+        jointLabel: 'Góc khuỷu tay',
+        top: 150,        // arm extended
+        target: 48,      // peak flexion
+        perfect: 45,
+        gaugeStart: 155,
+        restLabel: 'DOWN (DUỖI)',
+        activeLabel: 'UP (ĐỈNH GẬP)',
+        kcalPerRep: 0.30
+    }
+};
+
+// App State
+let currentExercise = 'SQUAT';
 let selectedArmMode = 'BOTH';  // 'BOTH', 'RIGHT', 'LEFT'
 let isCameraActive = false;
-let currentFacingMode = 'user'; // 'user' (front) or 'environment' (back)
+let isStarting = false;
+let currentFacingMode = 'user';
 let isVoiceEnabled = true;
 
 // Workout Metrics
 let repCount = 0;
 let durationSeconds = 0;
 let timerInterval = null;
-let formScores = []; // tracks depth quality of each rep
+let formScores = [];
+let sessionId = Date.now();
 
-// Pose State Machine
-let squatStage = 'UP'; // 'UP' or 'DOWN'
-let squatMinAngle = 180;
+// Rep State Machine (shared by both exercises)
+let repStage = 'REST';    // 'REST' (top position) or 'ACTIVE' (target reached)
+let minAngleInRep = 180;
 
-let curlStage = 'DOWN'; // 'DOWN' or 'UP'
-let curlMinAngle = 180;
-
-// MediaPipe & WebRTC Stream
+// MediaPipe & WebRTC
 let poseInstance = null;
 let activeMediaStream = null;
-let animationFrameId = null;
+let loopToken = 0;        // increments on every (re)start so stale loops exit
+let wakeLock = null;
+let audioCtx = null;
 
-// UI Elements Cache
-const videoEl = document.getElementById('video-element');
-const canvasEl = document.getElementById('output-canvas');
+// UI Elements
+const $ = (id) => document.getElementById(id);
+const videoEl = $('video-element');
+const canvasEl = $('output-canvas');
 const canvasCtx = canvasEl.getContext('2d');
 
-const placeholderEl = document.getElementById('camera-placeholder');
-const loaderEl = document.getElementById('camera-loader');
-const hudEl = document.getElementById('stage-hud');
+const placeholderEl = $('camera-placeholder');
+const placeholderTitleEl = $('placeholder-title');
+const placeholderTextEl = $('placeholder-text');
+const loaderEl = $('camera-loader');
+const loaderTextEl = $('loader-text');
+const hudEl = $('stage-hud');
 
-const repNumberEl = document.getElementById('hud-rep-number');
-const angleValEl = document.getElementById('hud-angle-val');
-const gaugeFillEl = document.getElementById('gauge-fill');
-const stageBadgeEl = document.getElementById('hud-stage-label');
-const feedbackPillEl = document.getElementById('hud-feedback-pill');
-const feedbackTextEl = document.getElementById('hud-feedback-text');
-const jointLabelEl = document.getElementById('gauge-joint-label');
-const targetTextEl = document.getElementById('gauge-target-text');
+const repNumberEl = $('hud-rep-number');
+const angleValEl = $('hud-angle-val');
+const gaugeFillEl = $('gauge-fill');
+const stageBadgeEl = $('hud-stage-label');
+const feedbackPillEl = $('hud-feedback-pill');
+const feedbackTextEl = $('hud-feedback-text');
+const jointLabelEl = $('gauge-joint-label');
+const targetTextEl = $('gauge-target-text');
 
-const statusBadgeEl = document.getElementById('ai-status-badge');
-const statusTextEl = document.getElementById('ai-status-text');
+const statusBadgeEl = $('ai-status-badge');
+const statusTextEl = $('ai-status-text');
 
-const btnToggleCamera = document.getElementById('btn-toggle-camera');
-const btnFlipCamera = document.getElementById('btn-flip-camera');
-const btnToggleVoice = document.getElementById('btn-toggle-voice');
+const btnToggleCamera = $('btn-toggle-camera');
+const btnToggleVoice = $('btn-toggle-voice');
 
-const statTimeEl = document.getElementById('stat-time');
-const statCalsEl = document.getElementById('stat-cals');
-const statAccuracyEl = document.getElementById('stat-accuracy');
-const armPickerRow = document.getElementById('arm-picker-row');
+const statTimeEl = $('stat-time');
+const statCalsEl = $('stat-cals');
+const statAccuracyEl = $('stat-accuracy');
+const armPickerRow = $('arm-picker-row');
+const historyListEl = $('history-list');
 
 // ==============================================================
-// AUDIO & SPEECH SYNTHESIS FEEDBACK
+// AUDIO & SPEECH FEEDBACK
 // ==============================================================
 function playBeep(freq = 700, duration = 0.1) {
     try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
+        const now = audioCtx.currentTime;
 
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
 
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-
-        osc.start();
-        setTimeout(() => {
-            osc.stop();
-            audioCtx.close();
-        }, duration * 1000);
+        osc.start(now);
+        osc.stop(now + duration);
     } catch (e) {
-        console.warn("Audio Context not allowed or failed", e);
+        console.warn('Audio not available', e);
     }
 }
 
@@ -93,64 +128,57 @@ function speakRep(number) {
         utterance.pitch = 1.05;
         window.speechSynthesis.speak(utterance);
     } catch (e) {
-        console.warn("Speech synthesis error", e);
+        console.warn('Speech synthesis error', e);
     }
 }
 
 // ==============================================================
-// EXERCISE SELECTOR
+// EXERCISE & ARM SELECTOR
 // ==============================================================
-window.selectExercise = function(type) {
+window.selectExercise = function (type) {
+    if (!EXERCISES[type]) return;
+    saveSession();
     currentExercise = type;
-    
-    // Toggle active classes on buttons
-    document.getElementById('btn-exercise-squat').classList.toggle('active', type === 'SQUAT');
-    document.getElementById('btn-exercise-curl').classList.toggle('active', type === 'CURL');
+    const cfg = EXERCISES[type];
 
-    // Show arm selector only for Bicep Curl
+    $('btn-exercise-squat').classList.toggle('active', type === 'SQUAT');
+    $('btn-exercise-curl').classList.toggle('active', type === 'CURL');
+    $('btn-exercise-squat').setAttribute('aria-pressed', type === 'SQUAT');
+    $('btn-exercise-curl').setAttribute('aria-pressed', type === 'CURL');
+
     armPickerRow.style.display = type === 'CURL' ? 'flex' : 'none';
 
-    // Update HUD target descriptions
-    if (type === 'SQUAT') {
-        jointLabelEl.textContent = "Góc đầu gối";
-        targetTextEl.textContent = "Chuẩn: < 95°";
-        stageBadgeEl.textContent = "UP (ĐỨNG)";
-        squatStage = 'UP';
-        squatMinAngle = 180;
-    } else {
-        jointLabelEl.textContent = "Góc khuỷu tay";
-        targetTextEl.textContent = "Chuẩn: < 48°";
-        stageBadgeEl.textContent = "DOWN (DUỖI)";
-        curlStage = 'DOWN';
-        curlMinAngle = 180;
-    }
+    jointLabelEl.textContent = cfg.jointLabel;
+    targetTextEl.textContent = `Chuẩn: < ${cfg.target}°`;
 
     resetCounter();
 };
 
-window.setArmMode = function(mode) {
+window.setArmMode = function (mode) {
     selectedArmMode = mode;
     document.querySelectorAll('.arm-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.textContent.includes(mode === 'BOTH' ? '2 Tay' : (mode === 'RIGHT' ? 'Phải' : 'Trái')));
+        const isActive = btn.dataset.mode === mode;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive);
     });
 };
 
 // ==============================================================
-// MEDIAPIPE INITIALIZATION & CAMERA WEBRTC
+// MEDIAPIPE & CAMERA
 // ==============================================================
 async function getPoseModel() {
     if (poseInstance) return poseInstance;
 
     if (typeof window.Pose === 'undefined') {
-        throw new Error("Thư viện MediaPipe Pose chưa sẵn sàng. Vui lòng kiểm tra kết nối internet.");
+        throw new Error('Thư viện AI chưa tải được. Vui lòng kiểm tra kết nối internet rồi tải lại trang.');
     }
 
     poseInstance = new window.Pose({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MEDIAPIPE_POSE_VERSION}/${file}`
     });
 
     poseInstance.setOptions({
-        modelComplexity: 1, // 0: lite, 1: full (khuyên dùng cho browser)
+        modelComplexity: 1,
         smoothLandmarks: true,
         enableSegmentation: false,
         minDetectionConfidence: 0.5,
@@ -158,11 +186,15 @@ async function getPoseModel() {
     });
 
     poseInstance.onResults(onPoseResults);
+
+    // Download & warm up the model before hiding the loader
+    loaderTextEl.textContent = 'Đang tải mô hình AI (lần đầu có thể mất vài giây)...';
+    await poseInstance.initialize();
     return poseInstance;
 }
 
-// Toggle Camera On/Off
-window.toggleCamera = async function() {
+window.toggleCamera = async function () {
+    if (isStarting) return;
     if (isCameraActive) {
         stopCamera();
     } else {
@@ -170,132 +202,205 @@ window.toggleCamera = async function() {
     }
 };
 
+function cameraErrorMessage(err) {
+    if (!window.isSecureContext) return 'Camera chỉ hoạt động trên HTTPS hoặc localhost.';
+    switch (err && err.name) {
+        case 'NotAllowedError':
+        case 'SecurityError':
+            return 'Bạn đã chặn quyền Camera. Hãy bấm biểu tượng ổ khóa trên thanh địa chỉ, cho phép Camera rồi thử lại.';
+        case 'NotFoundError':
+        case 'OverconstrainedError':
+            return 'Không tìm thấy camera trên thiết bị này.';
+        case 'NotReadableError':
+            return 'Camera đang được ứng dụng khác sử dụng. Hãy đóng ứng dụng đó rồi thử lại.';
+        default:
+            return (err && err.message) || 'Đã có lỗi không xác định.';
+    }
+}
+
 async function startCamera() {
+    isStarting = true;
+    const myToken = ++loopToken; // stops any previous loop
     loaderEl.style.display = 'flex';
     placeholderEl.style.display = 'none';
-    statusTextEl.textContent = "Đang nạp AI...";
+    loaderTextEl.textContent = 'Đang nạp Camera & Khung Xương AI...';
+    statusTextEl.textContent = 'Đang nạp AI...';
 
     try {
-        await getPoseModel();
-
-        if (activeMediaStream) {
-            activeMediaStream.getTracks().forEach(t => t.stop());
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Trình duyệt không hỗ trợ camera. Hãy dùng Chrome, Edge hoặc Safari mới nhất.');
         }
 
-        const constraints = {
+        stopStream();
+
+        loaderTextEl.textContent = 'Đang mở Camera...';
+        activeMediaStream = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: currentFacingMode,
                 width: { ideal: 640 },
                 height: { ideal: 480 }
             },
             audio: false
-        };
-
-        activeMediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        });
         videoEl.srcObject = activeMediaStream;
         await videoEl.play();
 
         canvasEl.width = videoEl.videoWidth || 640;
         canvasEl.height = videoEl.videoHeight || 480;
 
-        if (currentFacingMode === 'user') {
-            canvasEl.classList.add('mirrored');
-        } else {
-            canvasEl.classList.remove('mirrored');
-        }
+        await getPoseModel();
+        if (myToken !== loopToken) return; // superseded by another start/stop
 
         isCameraActive = true;
+        if (repCount === 0) sessionId = Date.now(); // session starts when training starts
         loaderEl.style.display = 'none';
         hudEl.style.display = 'flex';
 
         btnToggleCamera.innerHTML = '<i class="fa-solid fa-stop"></i> <span>TẮT CAMERA / DỪNG</span>';
         btnToggleCamera.classList.add('running');
 
-        statusBadgeEl.className = "status-badge running";
-        statusTextEl.textContent = "AI Đang Hoạt Động";
+        statusBadgeEl.className = 'status-badge running';
+        statusTextEl.textContent = 'AI Đang Hoạt Động';
 
+        // Unlock audio on this user gesture (iOS needs it)
+        playBeep(1, 0.01);
+
+        requestWakeLock();
         startTimer();
-        runVideoLoop();
+        runVideoLoop(myToken);
     } catch (err) {
-        console.error("Camera error:", err);
+        console.error('Camera error:', err);
+        stopStream();
+        isCameraActive = false;
         loaderEl.style.display = 'none';
-        placeholderEl.style.display = 'flex';
-        statusTextEl.textContent = "Lỗi Camera";
-        alert("Không thể mở Camera: " + (err.message || err.name) + "\nVui lòng cho phép quyền truy cập Camera trên trình duyệt!");
+        showPlaceholder('Không Mở Được Camera', cameraErrorMessage(err), true);
+        statusBadgeEl.className = 'status-badge error';
+        statusTextEl.textContent = 'Lỗi Camera';
+    } finally {
+        isStarting = false;
     }
 }
 
-function stopCamera() {
-    isCameraActive = false;
-    cancelAnimationFrame(animationFrameId);
-    stopTimer();
-
+function stopStream() {
     if (activeMediaStream) {
         activeMediaStream.getTracks().forEach(t => t.stop());
         activeMediaStream = null;
     }
+    videoEl.srcObject = null;
+}
 
-    placeholderEl.style.display = 'flex';
+function stopCamera() {
+    loopToken++;
+    isCameraActive = false;
+    stopTimer();
+    stopStream();
+    releaseWakeLock();
+    saveSession();
+
+    showPlaceholder('Camera Đang Tắt', 'Bấm nút <strong>"BẬT CAMERA & BẮT ĐẦU"</strong> bên dưới để AI tự động vẽ khung xương và đếm số rep cho bạn!');
     hudEl.style.display = 'none';
     canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
     btnToggleCamera.innerHTML = '<i class="fa-solid fa-play"></i> <span>BẬT CAMERA & BẮT ĐẦU</span>';
     btnToggleCamera.classList.remove('running');
 
-    statusBadgeEl.className = "status-badge ready";
-    statusTextEl.textContent = "AI Đã Sẵn Sàng";
+    statusBadgeEl.className = 'status-badge ready';
+    statusTextEl.textContent = 'AI Đã Sẵn Sàng';
 }
 
-// Flip Camera (Front / Back)
-window.flipCamera = async function() {
+function showPlaceholder(title, html, isError = false) {
+    placeholderTitleEl.textContent = title;
+    placeholderTextEl.innerHTML = html;
+    placeholderEl.classList.toggle('error', isError);
+    placeholderEl.style.display = 'flex';
+}
+
+window.flipCamera = async function () {
+    if (isStarting) return;
     currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
     if (isCameraActive) {
+        stopTimer();
         await startCamera();
     }
 };
 
-// Toggle Speech Voice
-window.toggleVoice = function() {
+window.toggleVoice = function () {
     isVoiceEnabled = !isVoiceEnabled;
     btnToggleVoice.classList.toggle('active', isVoiceEnabled);
-    btnToggleVoice.innerHTML = `<i class="fa-solid ${isVoiceEnabled ? 'fa-volume-high' : 'fa-volume-xmark'}"></i> <span>Giọng Đọc: ${isVoiceEnabled ? 'BẬT' : 'TẮT'}</span>`;
+    btnToggleVoice.setAttribute('aria-pressed', isVoiceEnabled);
+    btnToggleVoice.innerHTML = `<i class="fa-solid ${isVoiceEnabled ? 'fa-volume-high' : 'fa-volume-xmark'}"></i> <span>Giọng: ${isVoiceEnabled ? 'BẬT' : 'TẮT'}</span>`;
 };
 
-// Reset Counter
-window.resetCounter = function() {
+window.resetCounter = function () {
+    saveSession();
+    sessionId = Date.now();
     repCount = 0;
     durationSeconds = 0;
     formScores = [];
-    squatStage = 'UP';
-    squatMinAngle = 180;
-    curlStage = 'DOWN';
-    curlMinAngle = 180;
+    repStage = 'REST';
+    minAngleInRep = 180;
 
-    repNumberEl.textContent = "0";
-    statTimeEl.textContent = "00:00";
-    statCalsEl.textContent = "0 kcal";
-    statAccuracyEl.textContent = "100%";
-    gaugeFillEl.style.width = "0%";
-    angleValEl.textContent = "180°";
+    repNumberEl.textContent = '0';
+    statTimeEl.textContent = '00:00';
+    statCalsEl.textContent = '0 kcal';
+    statAccuracyEl.textContent = '--';
+    gaugeFillEl.style.width = '0%';
+    angleValEl.textContent = '--°';
+    stageBadgeEl.textContent = EXERCISES[currentExercise].restLabel;
 };
 
-// RequestAnimationFrame Frame Processing
-async function runVideoLoop() {
-    if (!isCameraActive) return;
+// Frame loop: one in-flight frame at a time, exits when its token is stale
+async function runVideoLoop(token) {
+    if (token !== loopToken || !isCameraActive) return;
 
-    if (videoEl && videoEl.readyState >= 2 && poseInstance) {
+    if (videoEl.readyState >= 2 && poseInstance) {
         try {
             await poseInstance.send({ image: videoEl });
         } catch (e) {
-            console.warn("Pose processing frame issue", e);
+            console.warn('Pose frame issue', e);
         }
     }
-    animationFrameId = requestAnimationFrame(runVideoLoop);
+    requestAnimationFrame(() => runVideoLoop(token));
 }
 
 // ==============================================================
-// POSE RESULTS & SKELETON DRAWING
+// SCREEN WAKE LOCK (keeps phone screen on while training)
 // ==============================================================
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator && !wakeLock) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => { wakeLock = null; });
+        }
+    } catch (e) {
+        console.warn('Wake lock unavailable', e);
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock) {
+        wakeLock.release().catch(() => {});
+        wakeLock = null;
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isCameraActive) requestWakeLock();
+});
+
+// ==============================================================
+// POSE RESULTS & DRAWING
+// ==============================================================
+const isMirrored = () => currentFacingMode === 'user';
+
+// Convert normalized landmark to canvas pixel (handles mirroring)
+function toPx(p, width, height) {
+    const x = isMirrored() ? 1 - p.x : p.x;
+    return { x: x * width, y: p.y * height };
+}
+
+const isVisible = (p) => !!p && (p.visibility ?? 1) > VIS_THRESHOLD;
+
 function onPoseResults(results) {
     if (!isCameraActive) return;
 
@@ -304,43 +409,40 @@ function onPoseResults(results) {
 
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, width, height);
-
-    // Draw camera image
+    if (isMirrored()) {
+        canvasCtx.translate(width, 0);
+        canvasCtx.scale(-1, 1);
+    }
     canvasCtx.drawImage(results.image, 0, 0, width, height);
+    canvasCtx.restore();
 
     if (!results.poseLandmarks) {
-        setFeedback("Không phát hiện người! Hãy đứng trước camera", "ready");
-        canvasCtx.restore();
+        setFeedback('Không phát hiện người! Hãy đứng trước camera', 'ready');
         return;
     }
 
     const lm = results.poseLandmarks;
-
-    // Draw Glowing Neon Skeleton
     drawNeonSkeleton(canvasCtx, lm, width, height);
 
-    // Process specific exercise counting
     if (currentExercise === 'SQUAT') {
         processSquat(lm, width, height);
     } else {
         processBicepCurl(lm, width, height);
     }
-
-    canvasCtx.restore();
 }
 
-// Cyberpunk Neon Skeleton Drawing
-function drawNeonSkeleton(ctx, lm, width, height) {
-    const pairs = [
-        [11, 12], // shoulders
-        [11, 13], [13, 15], // left arm
-        [12, 14], [14, 16], // right arm
-        [11, 23], [12, 24], // torso
-        [23, 24], // hips
-        [23, 25], [25, 27], // left leg
-        [24, 26], [26, 28]  // right leg
-    ];
+const SKELETON_PAIRS = [
+    [11, 12],
+    [11, 13], [13, 15],
+    [12, 14], [14, 16],
+    [11, 23], [12, 24],
+    [23, 24],
+    [23, 25], [25, 27],
+    [24, 26], [26, 28]
+];
+const SKELETON_JOINTS = [...new Set(SKELETON_PAIRS.flat())];
 
+function drawNeonSkeleton(ctx, lm, width, height) {
     ctx.save();
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
@@ -348,39 +450,33 @@ function drawNeonSkeleton(ctx, lm, width, height) {
     ctx.shadowColor = '#00F2FE';
     ctx.strokeStyle = '#00F2FE';
 
-    pairs.forEach(([i, j]) => {
-        const p1 = lm[i];
-        const p2 = lm[j];
-        if (p1 && p2 && (p1.visibility || 1) > 0.4 && (p2.visibility || 1) > 0.4) {
+    SKELETON_PAIRS.forEach(([i, j]) => {
+        if (isVisible(lm[i]) && isVisible(lm[j])) {
+            const a = toPx(lm[i], width, height);
+            const b = toPx(lm[j], width, height);
             ctx.beginPath();
-            ctx.moveTo(p1.x * width, p1.y * height);
-            ctx.lineTo(p2.x * width, p2.y * height);
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
             ctx.stroke();
         }
     });
 
-    // Draw dots at joints
-    pairs.flat().forEach(idx => {
-        const p = lm[idx];
-        if (p && (p.visibility || 1) > 0.4) {
-            const x = p.x * width;
-            const y = p.y * height;
-
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, 2 * Math.PI);
-            ctx.fillStyle = '#00F2FE';
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(x, y, 3, 0, 2 * Math.PI);
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fill();
-        }
+    SKELETON_JOINTS.forEach(idx => {
+        if (!isVisible(lm[idx])) return;
+        const { x, y } = toPx(lm[idx], width, height);
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = '#00F2FE';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
     });
     ctx.restore();
 }
 
-// Vector Angle between 3 Points (A-B-C with B as vertex)
+// Angle at vertex B formed by A-B-C (degrees)
 function calculateAngle(a, b, c) {
     if (!a || !b || !c) return 180;
     const rad = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -389,232 +485,189 @@ function calculateAngle(a, b, c) {
     return Math.round(deg);
 }
 
-// Draw Angle bubble directly on Canvas joint
+function roundRectPath(ctx, x, y, w, h, r) {
+    if (ctx.roundRect) {
+        ctx.roundRect(x, y, w, h, r);
+        return;
+    }
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
 function drawJointAngleLabel(ctx, x, y, angle, isTargetReached) {
+    const color = isTargetReached ? '#00E676' : '#FF9500';
     ctx.save();
     const text = `${angle}°`;
     ctx.font = 'bold 15px Outfit, sans-serif';
     const textWidth = ctx.measureText(text).width;
 
+    // Keep the bubble inside the canvas
+    const boxW = textWidth + 14;
+    const boxX = Math.min(x + 10, ctx.canvas.width - boxW - 4);
+
     ctx.fillStyle = 'rgba(13, 14, 18, 0.85)';
     ctx.beginPath();
-    ctx.roundRect(x + 10, y - 13, textWidth + 14, 24, 12);
+    roundRectPath(ctx, boxX, y - 13, boxW, 24, 12);
     ctx.fill();
-
     ctx.lineWidth = 1.5;
-    ctx.strokeStyle = isTargetReached ? '#00E676' : '#FF9500';
+    ctx.strokeStyle = color;
     ctx.stroke();
 
-    ctx.fillStyle = isTargetReached ? '#00E676' : '#FFFFFF';
-    ctx.fillText(text, x + 17, y + 4);
+    ctx.fillStyle = isTargetReached ? color : '#FFFFFF';
+    ctx.fillText(text, boxX + 7, y + 4);
 
-    // Glow on vertex joint
     ctx.beginPath();
     ctx.arc(x, y, 7, 0, 2 * Math.PI);
-    ctx.fillStyle = isTargetReached ? '#00E676' : '#FF9500';
+    ctx.fillStyle = color;
     ctx.fill();
     ctx.restore();
 }
 
+// Pick the joint angle to track from left/right sides
+function pickSide(lm, leftIdx, rightIdx, mode) {
+    const left = { pts: leftIdx.map(i => lm[i]) };
+    const right = { pts: rightIdx.map(i => lm[i]) };
+    [left, right].forEach(s => {
+        s.vis = s.pts.reduce((sum, p) => sum + (p?.visibility ?? 0), 0) / 3;
+        s.angle = calculateAngle(...s.pts);
+        s.vertex = s.pts[1];
+        s.ok = s.vis >= VIS_THRESHOLD;
+    });
+
+    if (mode === 'LEFT') return left.ok ? left : null;
+    if (mode === 'RIGHT') return right.ok ? right : null;
+    if (left.ok && right.ok) return left.angle <= right.angle ? left : right;
+    if (left.ok) return left;
+    if (right.ok) return right;
+    return null;
+}
+
 // ==============================================================
-// SQUAT COUNTING ALGORITHM
+// REP COUNTING (shared state machine)
 // ==============================================================
+function processRep(angle, msgs) {
+    const cfg = EXERCISES[currentExercise];
+
+    const pct = Math.max(0, Math.min(100, Math.round(((cfg.gaugeStart - angle) / (cfg.gaugeStart - cfg.target)) * 100)));
+    angleValEl.textContent = `${angle}°`;
+    gaugeFillEl.style.width = `${pct}%`;
+
+    if (angle > cfg.top) {
+        if (repStage === 'ACTIVE') {
+            repCount++;
+            repStage = 'REST';
+            formScores.push(minAngleInRep <= cfg.perfect ? 100 : 80);
+            updateStatsDisplay();
+            triggerRepAnimation();
+            playBeep(800, 0.12);
+            speakRep(repCount);
+            setFeedback(msgs.counted(minAngleInRep), 'good');
+            minAngleInRep = 180;
+        } else {
+            minAngleInRep = 180;
+            setFeedback(msgs.rest, 'ready');
+        }
+        stageBadgeEl.textContent = cfg.restLabel;
+    } else if (angle <= cfg.target) {
+        repStage = 'ACTIVE';
+        minAngleInRep = Math.min(minAngleInRep, angle);
+        stageBadgeEl.textContent = cfg.activeLabel;
+        setFeedback(msgs.reached, 'good');
+    } else {
+        minAngleInRep = Math.min(minAngleInRep, angle);
+        if (repStage === 'REST') {
+            setFeedback(msgs.deeper, 'warning');
+        } else {
+            setFeedback(msgs.returning, 'ready');
+        }
+    }
+}
+
 function processSquat(lm, width, height) {
-    // Left leg: Hip (23), Knee (25), Ankle (27)
-    // Right leg: Hip (24), Knee (26), Ankle (28)
-    const lHip = lm[23], lKnee = lm[25], lAnkle = lm[27];
-    const rHip = lm[24], rKnee = lm[26], rAnkle = lm[28];
-
-    const lVis = ((lHip?.visibility || 0) + (lKnee?.visibility || 0) + (lAnkle?.visibility || 0)) / 3;
-    const rVis = ((rHip?.visibility || 0) + (rKnee?.visibility || 0) + (rAnkle?.visibility || 0)) / 3;
-
-    if (lVis < 0.4 && rVis < 0.4) {
-        setFeedback("Hãy lùi lại để camera thấy từ hông tới bàn chân", "ready");
+    const side = pickSide(lm, [23, 25, 27], [24, 26, 28], 'BOTH');
+    if (!side) {
+        setFeedback('Hãy lùi lại để camera thấy từ hông tới bàn chân', 'ready');
         return;
     }
+    const v = toPx(side.vertex, width, height);
+    drawJointAngleLabel(canvasCtx, v.x, v.y, side.angle, side.angle <= EXERCISES.SQUAT.target);
 
-    const lAngle = calculateAngle(lHip, lKnee, lAnkle);
-    const rAngle = calculateAngle(rHip, rKnee, rAnkle);
-
-    let currentAngle = 180;
-    let activeKneePoint = null;
-
-    if (lVis >= 0.4 && rVis >= 0.4) {
-        currentAngle = Math.min(lAngle, rAngle);
-        activeKneePoint = lAngle <= rAngle ? lKnee : rKnee;
-    } else if (lVis >= 0.4) {
-        currentAngle = lAngle;
-        activeKneePoint = lKnee;
-    } else {
-        currentAngle = rAngle;
-        activeKneePoint = rKnee;
-    }
-
-    if (activeKneePoint) {
-        drawJointAngleLabel(canvasCtx, activeKneePoint.x * width, activeKneePoint.y * height, currentAngle, currentAngle <= 95);
-    }
-
-    // Gauge progress (170° = 0%, 95° = 100%)
-    const pct = Math.max(0, Math.min(100, Math.round(((170 - currentAngle) / (170 - 95)) * 100)));
-    angleValEl.textContent = `${currentAngle}°`;
-    gaugeFillEl.style.width = `${pct}%`;
-
-    // Squat State Machine
-    if (currentAngle > 160) {
-        // Standing Up
-        if (squatStage === 'DOWN') {
-            repCount++;
-            squatStage = 'UP';
-            
-            const isGoodDepth = squatMinAngle <= 90;
-            formScores.push(isGoodDepth ? 100 : 75);
-            updateStatsDisplay();
-
-            triggerRepAnimation();
-            playBeep(800, 0.12);
-            speakRep(repCount);
-
-            setFeedback(`Tuyệt vời! +1 Rep (Sâu: ${squatMinAngle}°)`, "good");
-            squatMinAngle = 180;
-        } else {
-            stageBadgeEl.textContent = "UP (ĐỨNG)";
-            setFeedback("Đang đứng thẳng. Hãy ngồi xổm xuống!", "ready");
-        }
-    } else if (currentAngle <= 95) {
-        // Target Squat Depth Achieved!
-        squatStage = 'DOWN';
-        squatMinAngle = Math.min(squatMinAngle, currentAngle);
-        stageBadgeEl.textContent = "DOWN (ĐẠT)";
-        setFeedback("Đã đạt chuẩn sâu! Đứng thẳng dậy nào!", "good");
-    } else {
-        squatMinAngle = Math.min(squatMinAngle, currentAngle);
-        if (squatStage === 'UP') {
-            setFeedback("Xuống sâu hơn nữa (< 95°)!", "warning");
-        }
-    }
+    processRep(side.angle, {
+        counted: (a) => `Tuyệt vời! +1 Rep (Sâu: ${a}°)`,
+        rest: 'Đang đứng thẳng. Hãy ngồi xổm xuống!',
+        reached: 'Đã đạt chuẩn sâu! Đứng thẳng dậy nào!',
+        deeper: `Xuống sâu hơn nữa (< ${EXERCISES.SQUAT.target}°)!`,
+        returning: 'Đứng thẳng hẳn lên để tính rep!'
+    });
 }
 
-// ==============================================================
-// BICEP CURL COUNTING ALGORITHM (Gập tạ tay)
-// ==============================================================
 function processBicepCurl(lm, width, height) {
-    // Shoulder (11/12), Elbow (13/14), Wrist (15/16)
-    const lSh = lm[11], lEl = lm[13], lWr = lm[15];
-    const rSh = lm[12], rEl = lm[14], rWr = lm[16];
-
-    const lVis = ((lSh?.visibility || 0) + (lEl?.visibility || 0) + (lWr?.visibility || 0)) / 3;
-    const rVis = ((rSh?.visibility || 0) + (rEl?.visibility || 0) + (rWr?.visibility || 0)) / 3;
-
-    if (lVis < 0.4 && rVis < 0.4) {
-        setFeedback("Hãy đứng để camera thấy rõ cánh tay và khuỷu tay", "ready");
+    const side = pickSide(lm, [11, 13, 15], [12, 14, 16], selectedArmMode);
+    if (!side) {
+        const which = selectedArmMode === 'LEFT' ? 'tay trái' : selectedArmMode === 'RIGHT' ? 'tay phải' : 'cánh tay';
+        setFeedback(`Hãy đứng để camera thấy rõ ${which} và khuỷu tay`, 'ready');
         return;
     }
+    const v = toPx(side.vertex, width, height);
+    drawJointAngleLabel(canvasCtx, v.x, v.y, side.angle, side.angle <= EXERCISES.CURL.target);
 
-    const lAngle = calculateAngle(lSh, lEl, lWr);
-    const rAngle = calculateAngle(rSh, rEl, rWr);
-
-    let currentAngle = 180;
-    let activeElbowPoint = null;
-
-    if (selectedArmMode === 'RIGHT') {
-        currentAngle = rAngle;
-        activeElbowPoint = rEl;
-    } else if (selectedArmMode === 'LEFT') {
-        currentAngle = lAngle;
-        activeElbowPoint = lEl;
-    } else {
-        // BOTH
-        if (lVis >= 0.4 && rVis >= 0.4) {
-            currentAngle = Math.min(lAngle, rAngle);
-            activeElbowPoint = lAngle <= rAngle ? lEl : rEl;
-        } else if (rVis >= 0.4) {
-            currentAngle = rAngle;
-            activeElbowPoint = rEl;
-        } else {
-            currentAngle = lAngle;
-            activeElbowPoint = lEl;
-        }
-    }
-
-    if (activeElbowPoint) {
-        drawJointAngleLabel(canvasCtx, activeElbowPoint.x * width, activeElbowPoint.y * height, currentAngle, currentAngle <= 48);
-    }
-
-    // Gauge (155° = 0%, 48° = 100%)
-    const pct = Math.max(0, Math.min(100, Math.round(((155 - currentAngle) / (155 - 48)) * 100)));
-    angleValEl.textContent = `${currentAngle}°`;
-    gaugeFillEl.style.width = `${pct}%`;
-
-    // Curl State Machine
-    if (currentAngle > 150) {
-        // Arm Extended (DOWN)
-        if (curlStage === 'UP') {
-            repCount++;
-            curlStage = 'DOWN';
-
-            const isPeakGood = curlMinAngle <= 45;
-            formScores.push(isPeakGood ? 100 : 75);
-            updateStatsDisplay();
-
-            triggerRepAnimation();
-            playBeep(800, 0.12);
-            speakRep(repCount);
-
-            setFeedback(`Chuẩn đỉnh! +1 Rep (Gập: ${curlMinAngle}°)`, "good");
-            curlMinAngle = 180;
-        } else {
-            stageBadgeEl.textContent = "DOWN (DUỖI)";
-            setFeedback("Tay duỗi thẳng. Gập tạ lên nào!", "ready");
-        }
-    } else if (currentAngle <= 48) {
-        // Peak flexion reached
-        curlStage = 'UP';
-        curlMinAngle = Math.min(curlMinAngle, currentAngle);
-        stageBadgeEl.textContent = "UP (ĐỈNH GẬP)";
-        setFeedback("Đã đạt đỉnh gập! Hạ tạ có kiểm soát!", "good");
-    } else {
-        curlMinAngle = Math.min(curlMinAngle, currentAngle);
-        if (curlStage === 'DOWN') {
-            setFeedback("Gập cao hơn nữa (< 48°)!", "warning");
-        }
-    }
+    processRep(side.angle, {
+        counted: (a) => `Chuẩn đỉnh! +1 Rep (Gập: ${a}°)`,
+        rest: 'Tay duỗi thẳng. Gập tạ lên nào!',
+        reached: 'Đã đạt đỉnh gập! Hạ tạ có kiểm soát!',
+        deeper: `Gập cao hơn nữa (< ${EXERCISES.CURL.target}°)!`,
+        returning: 'Duỗi thẳng tay hẳn xuống để tính rep!'
+    });
 }
 
-// Helpers for UI & Animation
+// ==============================================================
+// UI HELPERS
+// ==============================================================
+let lastFeedback = '';
 function setFeedback(text, status = 'ready') {
+    const key = status + text;
+    if (key === lastFeedback) return; // avoid DOM writes every frame
+    lastFeedback = key;
     feedbackTextEl.textContent = text;
     feedbackPillEl.className = `hud-feedback-pill ${status}`;
 }
 
 function triggerRepAnimation() {
     repNumberEl.textContent = repCount;
+    repNumberEl.classList.remove('pop-anim');
+    void repNumberEl.offsetWidth; // restart animation
     repNumberEl.classList.add('pop-anim');
-    setTimeout(() => {
-        repNumberEl.classList.remove('pop-anim');
-    }, 250);
+    setTimeout(() => repNumberEl.classList.remove('pop-anim'), 250);
+}
+
+function averageForm() {
+    if (!formScores.length) return null;
+    return Math.round(formScores.reduce((a, b) => a + b, 0) / formScores.length);
 }
 
 function updateStatsDisplay() {
     repNumberEl.textContent = repCount;
-    
-    // Calorie formula (Squat ~ 0.35 cal/rep, Curl ~ 0.30 cal/rep)
-    const factor = currentExercise === 'SQUAT' ? 0.35 : 0.30;
-    const cals = Math.round(repCount * factor * 10) / 10;
+    const cals = Math.round(repCount * EXERCISES[currentExercise].kcalPerRep * 10) / 10;
     statCalsEl.textContent = `${cals} kcal`;
+    const avg = averageForm();
+    statAccuracyEl.textContent = avg === null ? '--' : `${avg}%`;
+}
 
-    if (formScores.length > 0) {
-        const avg = Math.round(formScores.reduce((a, b) => a + b, 0) / formScores.length);
-        statAccuracyEl.textContent = `${avg}%`;
-    }
+function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         durationSeconds++;
-        const mins = Math.floor(durationSeconds / 60);
-        const secs = durationSeconds % 60;
-        statTimeEl.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        statTimeEl.textContent = formatTime(durationSeconds);
     }, 1000);
 }
 
@@ -622,7 +675,185 @@ function stopTimer() {
     clearInterval(timerInterval);
 }
 
-// Initial Setup on load
+// ==============================================================
+// WORKOUT HISTORY (Supabase cloud + localStorage cache/offline)
+// ==============================================================
+// The anon key is public by design; data is protected by Row Level Security.
+const SUPABASE_URL = 'https://lhsgdulyyssrcicwhdhs.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxoc2dkdWx5eXNzcmNpY3doZGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNTgxMDYsImV4cCI6MjA5MjkzNDEwNn0.9cXMTwNBmoJHnyvRezP1qivatXEDT-b58nW82c9i_Ng';
+const SESSIONS_TABLE = 'workout_sessions';
+
+let sb = null;          // Supabase client
+let sbUserId = null;    // set once signed in (anonymous)
+
+const syncStatusEl = $('sync-status');
+
+function setSyncStatus(state, text) {
+    syncStatusEl.className = `sync-status ${state}`;
+    const icon = state === 'cloud' ? 'fa-cloud' : state === 'syncing' ? 'fa-arrows-rotate fa-spin' : 'fa-cloud-arrow-up';
+    syncStatusEl.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${text}</span>`;
+}
+
+function loadHistory() {
+    try {
+        const data = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        return Array.isArray(data) ? data : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function storeHistory(history) {
+    history.sort((a, b) => new Date(b.date) - new Date(a.date));
+    try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, HISTORY_LIMIT)));
+    } catch (e) {
+        console.warn('Cannot save history', e);
+    }
+}
+
+const toRow = (h) => ({
+    user_id: sbUserId,
+    client_id: h.id,
+    exercise: h.exercise,
+    reps: h.reps,
+    duration_seconds: h.duration || 0,
+    form_score: h.form,
+    performed_at: h.date
+});
+
+const fromRow = (r) => ({
+    id: Number(r.client_id),
+    exercise: r.exercise,
+    reps: r.reps,
+    duration: r.duration_seconds,
+    form: r.form_score,
+    date: r.performed_at,
+    synced: true
+});
+
+async function initCloud() {
+    if (!window.supabase || !window.supabase.createClient) {
+        setSyncStatus('local', 'Chỉ lưu trên máy');
+        return;
+    }
+    try {
+        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: { persistSession: true, autoRefreshToken: true }
+        });
+        let { data: { session } } = await sb.auth.getSession();
+        if (!session) {
+            const { data, error } = await sb.auth.signInAnonymously();
+            if (error) throw error;
+            session = data.session;
+        }
+        sbUserId = session.user.id;
+        await syncHistory();
+    } catch (e) {
+        console.warn('Supabase unavailable, using local storage only', e);
+        sb = null;
+        sbUserId = null;
+        setSyncStatus('local', 'Chỉ lưu trên máy');
+    }
+}
+
+// Push unsynced local entries, then pull latest from cloud
+async function syncHistory() {
+    if (!sb || !sbUserId) return;
+    setSyncStatus('syncing', 'Đang đồng bộ...');
+    try {
+        const pending = loadHistory().filter(h => !h.synced);
+        if (pending.length) {
+            const { error } = await sb.from(SESSIONS_TABLE)
+                .upsert(pending.map(toRow), { onConflict: 'user_id,client_id' });
+            if (error) throw error;
+        }
+        const { data, error } = await sb.from(SESSIONS_TABLE)
+            .select('client_id, exercise, reps, duration_seconds, form_score, performed_at')
+            .order('performed_at', { ascending: false })
+            .limit(HISTORY_LIMIT);
+        if (error) throw error;
+
+        const stillPending = loadHistory().filter(h => !h.synced && !data.some(r => Number(r.client_id) === h.id));
+        storeHistory([...stillPending, ...data.map(fromRow)]);
+        renderHistory();
+        setSyncStatus(stillPending.length ? 'local' : 'cloud', stillPending.length ? 'Chờ đồng bộ' : 'Đã lưu đám mây');
+    } catch (e) {
+        console.warn('Sync failed', e);
+        setSyncStatus('local', 'Chờ đồng bộ');
+    }
+}
+
+async function pushEntry(entry) {
+    if (!sb || !sbUserId) return;
+    try {
+        const { error } = await sb.from(SESSIONS_TABLE)
+            .upsert(toRow(entry), { onConflict: 'user_id,client_id' });
+        if (error) throw error;
+        storeHistory(loadHistory().map(h => (h.id === entry.id ? { ...h, synced: true } : h)));
+        setSyncStatus('cloud', 'Đã lưu đám mây');
+    } catch (e) {
+        console.warn('Upload failed, will retry later', e);
+        setSyncStatus('local', 'Chờ đồng bộ');
+    }
+}
+
+function saveSession() {
+    if (repCount <= 0) return;
+    const entry = {
+        id: sessionId,
+        exercise: currentExercise,
+        reps: repCount,
+        duration: durationSeconds,
+        form: averageForm(),
+        date: new Date(sessionId).toISOString(),
+        synced: false
+    };
+    const history = loadHistory().filter(h => h.id !== sessionId);
+    history.unshift(entry);
+    storeHistory(history);
+    renderHistory();
+    pushEntry(entry);
+}
+
+window.addEventListener('online', syncHistory);
+
+function renderHistory() {
+    const history = loadHistory();
+    if (!history.length) {
+        historyListEl.innerHTML = '<li class="history-empty">Chưa có buổi tập nào. Bắt đầu ngay nhé!</li>';
+        return;
+    }
+    historyListEl.innerHTML = history.map(h => {
+        const d = new Date(h.date);
+        const when = `${d.toLocaleDateString('vi-VN')} ${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+        const name = EXERCISES[h.exercise]?.name || h.exercise;
+        const icon = h.exercise === 'SQUAT' ? 'fa-person-arrow-down-to-line' : 'fa-dumbbell';
+        return `<li>
+            <span class="h-name"><i class="fa-solid ${icon}"></i> ${name}</span>
+            <span class="h-reps">${h.reps} rep</span>
+            <span class="h-meta">${formatTime(h.duration || 0)} · ${h.form ?? '--'}%</span>
+            <span class="h-date">${when}${h.synced ? '' : ' <i class="fa-solid fa-cloud-arrow-up" title="Chưa đồng bộ"></i>'}</span>
+        </li>`;
+    }).join('');
+}
+
+window.clearHistory = async function () {
+    if (!loadHistory().length) return;
+    try { localStorage.removeItem(HISTORY_KEY); } catch (e) {}
+    renderHistory();
+    if (sb && sbUserId) {
+        const { error } = await sb.from(SESSIONS_TABLE).delete().eq('user_id', sbUserId);
+        if (error) console.warn('Cloud delete failed', error);
+    }
+};
+
+// Save progress if the page is closed mid-workout
+window.addEventListener('pagehide', saveSession);
+
+// Initial Setup
 document.addEventListener('DOMContentLoaded', () => {
     selectExercise('SQUAT');
+    renderHistory();
+    initCloud();
 });

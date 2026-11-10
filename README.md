@@ -23,6 +23,9 @@ Web App chuyên biệt ứng dụng trí tuệ nhân tạo (Google MediaPipe Pos
 - **Âm thanh giọng đọc tiếng Việt**: Tự động đếm "Một", "Hai", "Ba"... bằng Web Speech API và âm thanh beep chuẩn xác.
 - **Đổi camera trước / sau** thuận tiện trên cả điện thoại di động và máy tính.
 - **Thống kê buổi tập**: Số rep, thời gian tập, calo tiêu hao, độ chuẩn form.
+- **Lịch sử tập luyện**: Tự lưu 20 buổi tập gần nhất ngay trên trình duyệt (localStorage).
+- **Giữ màn hình sáng** khi đang tập (Screen Wake Lock API) để điện thoại không tự tắt màn hình.
+- **Riêng tư**: Mọi xử lý AI chạy trên thiết bị, hình ảnh camera không gửi đi đâu.
 
 ---
 

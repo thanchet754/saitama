@@ -2,17 +2,27 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AI Pose Fitness - Đếm Squat & Gập Tạ Bằng Khung Xương</title>
-    
+    <meta name="description" content="Đếm số lần Squat và Gập tạ tay tự động bằng AI khung xương qua camera. Miễn phí, chạy ngay trên trình duyệt, không cần cài đặt.">
+    <meta name="theme-color" content="#0D0E12">
+    <meta property="og:title" content="AI Pose Fitness - Đếm Squat & Gập Tạ">
+    <meta property="og:description" content="AI vẽ khung xương và đếm rep tự động qua camera điện thoại hoặc máy tính.">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230D0E12'/%3E%3Cpath d='M58 8 26 56h22l-6 36 32-48H52z' fill='%23FF5E3A'/%3E%3C/svg%3E">
+
     <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google MediaPipe Pose CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
+    <!-- Google MediaPipe Pose (pinned version) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+
+    <!-- Supabase (cloud workout history) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 
     <!-- App Stylesheet -->
     <link rel="stylesheet" href="style.css">
@@ -37,7 +47,7 @@
 
         <!-- Exercise Selector (2 Bài tập chính) -->
         <section class="exercise-picker">
-            <button id="btn-exercise-squat" class="exercise-btn active" onclick="selectExercise('SQUAT')">
+            <button id="btn-exercise-squat" class="exercise-btn active" aria-pressed="true" onclick="selectExercise('SQUAT')">
                 <div class="btn-icon-wrap"><i class="fa-solid fa-person-arrow-down-to-line"></i></div>
                 <div class="btn-info">
                     <h3>ĐẾM SQUAT</h3>
@@ -45,7 +55,7 @@
                 </div>
             </button>
 
-            <button id="btn-exercise-curl" class="exercise-btn" onclick="selectExercise('CURL')">
+            <button id="btn-exercise-curl" class="exercise-btn" aria-pressed="false" onclick="selectExercise('CURL')">
                 <div class="btn-icon-wrap"><i class="fa-solid fa-dumbbell"></i></div>
                 <div class="btn-info">
                     <h3>ĐẾM GẬP TẠ TAY</h3>
@@ -58,9 +68,9 @@
         <div id="arm-picker-row" class="arm-picker-row" style="display: none;">
             <span class="label"><i class="fa-solid fa-hand-fist"></i> Chọn tay:</span>
             <div class="arm-buttons">
-                <button class="arm-btn active" onclick="setArmMode('BOTH')">Cả 2 Tay</button>
-                <button class="arm-btn" onclick="setArmMode('RIGHT')">Tay Phải</button>
-                <button class="arm-btn" onclick="setArmMode('LEFT')">Tay Trái</button>
+                <button class="arm-btn active" data-mode="BOTH" aria-pressed="true" onclick="setArmMode('BOTH')">Cả 2 Tay</button>
+                <button class="arm-btn" data-mode="RIGHT" aria-pressed="false" onclick="setArmMode('RIGHT')">Tay Phải</button>
+                <button class="arm-btn" data-mode="LEFT" aria-pressed="false" onclick="setArmMode('LEFT')">Tay Trái</button>
             </div>
         </div>
 
@@ -77,14 +87,14 @@
                 <div class="placeholder-icon">
                     <i class="fa-solid fa-camera"></i>
                 </div>
-                <h3>Camera Đang Tắt</h3>
-                <p>Bấm nút <strong>"BẬT CAMERA & BẮT ĐẦU"</strong> bên dưới để AI tự động vẽ khung xương và đếm số rep cho bạn!</p>
+                <h3 id="placeholder-title">Camera Đang Tắt</h3>
+                <p id="placeholder-text">Bấm nút <strong>"BẬT CAMERA & BẮT ĐẦU"</strong> bên dưới để AI tự động vẽ khung xương và đếm số rep cho bạn!</p>
             </div>
 
             <!-- Loading overlay when camera/AI is starting -->
             <div id="camera-loader" class="camera-loader" style="display: none;">
                 <div class="spinner"></div>
-                <p>Đang nạp Camera & Khung Xương AI...</p>
+                <p id="loader-text">Đang nạp Camera & Khung Xương AI...</p>
                 <span>Vui lòng cấp quyền truy cập Camera khi trình duyệt hỏi</span>
             </div>
 
@@ -112,7 +122,7 @@
                 </div>
 
                 <!-- Form Feedback Message -->
-                <div id="hud-feedback-pill" class="hud-feedback-pill ready">
+                <div id="hud-feedback-pill" class="hud-feedback-pill ready" role="status" aria-live="polite">
                     <i class="fa-solid fa-circle-info"></i>
                     <span id="hud-feedback-text">Đứng lùi lại để camera thấy toàn thân</span>
                 </div>
@@ -130,7 +140,7 @@
             </button>
 
             <button id="btn-toggle-voice" class="btn btn-secondary active" onclick="toggleVoice()" title="Bật/Tắt giọng đọc số">
-                <i class="fa-solid fa-volume-high"></i> <span>Giọng Đọc: BẬT</span>
+                <i class="fa-solid fa-volume-high"></i> <span>Giọng: BẬT</span>
             </button>
 
             <button id="btn-reset-counter" class="btn btn-outline" onclick="resetCounter()" title="Reset bộ đếm">
@@ -150,8 +160,22 @@
             </div>
             <div class="stat-card">
                 <span class="stat-title"><i class="fa-solid fa-bullseye"></i> Chuẩn Form</span>
-                <span id="stat-accuracy" class="stat-number">100%</span>
+                <span id="stat-accuracy" class="stat-number">--</span>
             </div>
+        </section>
+
+        <!-- Workout History -->
+        <section class="history-panel">
+            <div class="history-head">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Tập Luyện</h3>
+                <span id="sync-status" class="sync-status local" title="Trạng thái đồng bộ">
+                    <i class="fa-solid fa-cloud"></i> <span>Đang kết nối...</span>
+                </span>
+                <button class="history-clear" onclick="clearHistory()" title="Xóa lịch sử">
+                    <i class="fa-solid fa-trash-can"></i> Xóa
+                </button>
+            </div>
+            <ul id="history-list" class="history-list"></ul>
         </section>
 
         <!-- Instructions Card -->
@@ -164,6 +188,10 @@
                 <li><strong>Gập tạ:</strong> Duỗi thẳng tay xuống, sau đó gập tạ sát ngực rồi hạ tạ có kiểm soát.</li>
             </ul>
         </section>
+
+        <footer class="app-footer">
+            Mọi xử lý AI chạy ngay trên thiết bị của bạn. Hình ảnh camera không được gửi đi đâu.
+        </footer>
     </div>
 
     <!-- App Script -->

@@ -34,6 +34,7 @@ body {
     display: flex;
     justify-content: center;
     padding: 16px 12px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 h1, h2, h3, .hud-rep-val, .stat-number {
@@ -245,10 +246,6 @@ h1, h2, h3, .hud-rep-val, .stat-number {
     height: 100%;
     object-fit: cover;
     display: block;
-}
-
-.output-canvas.mirrored {
-    transform: scaleX(-1);
 }
 
 /* Placeholder when camera is stopped */
@@ -498,6 +495,8 @@ h1, h2, h3, .hud-rep-val, .stat-number {
     gap: 8px;
     cursor: pointer;
     transition: var(--transition);
+    white-space: nowrap;
+    padding: 0 10px;
 }
 
 .btn:active {
@@ -618,6 +617,160 @@ h1, h2, h3, .hud-rep-val, .stat-number {
 
 .guide-panel strong {
     color: var(--text-white);
+}
+
+/* Error states */
+.status-badge.error {
+    background: rgba(255, 59, 48, 0.12);
+    border-color: rgba(255, 59, 48, 0.4);
+    color: #FF6B60;
+}
+.status-badge.error .dot {
+    background: #FF6B60;
+    box-shadow: 0 0 8px #FF6B60;
+}
+
+.camera-placeholder.error .placeholder-icon {
+    background: rgba(255, 59, 48, 0.12);
+    border-color: rgba(255, 59, 48, 0.4);
+    color: #FF6B60;
+}
+
+/* Keyboard focus */
+button:focus-visible {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 2px;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* History Panel */
+.history-panel {
+    background: var(--card-dark);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.history-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.history-head h3 {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--neon-cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.history-head h3 { flex: 1; }
+
+.sync-status {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 20px;
+    margin-right: 8px;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.sync-status.cloud {
+    color: var(--neon-green);
+    border-color: rgba(0, 230, 118, 0.35);
+    background: rgba(0, 230, 118, 0.08);
+}
+
+.sync-status.syncing {
+    color: var(--neon-cyan);
+    border-color: rgba(0, 242, 254, 0.35);
+}
+
+.sync-status.local {
+    color: var(--neon-orange);
+    border-color: rgba(255, 149, 0, 0.35);
+}
+
+.history-list .h-date i { color: var(--neon-orange); margin-left: 4px; }
+
+.history-clear {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.history-clear:hover {
+    color: #FF6B60;
+    border-color: rgba(255, 59, 48, 0.4);
+}
+
+.history-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.history-list li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+        "name reps"
+        "date meta";
+    gap: 2px 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+}
+
+.history-list .h-name { grid-area: name; font-weight: 700; color: #FFF; }
+.history-list .h-name i { color: var(--primary); margin-right: 4px; }
+.history-list .h-reps { grid-area: reps; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 15px; color: var(--neon-cyan); text-align: right; }
+.history-list .h-date { grid-area: date; color: var(--text-muted); font-size: 11px; }
+.history-list .h-meta { grid-area: meta; color: var(--text-muted); font-size: 11px; text-align: right; }
+
+.history-list li.history-empty {
+    display: block;
+    text-align: center;
+    color: var(--text-muted);
+    background: transparent;
+    border-style: dashed;
+}
+
+/* Footer */
+.app-footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 4px 8px 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 /* Responsive adjustments for Mobile */
