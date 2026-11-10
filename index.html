@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AI Pose Fitness - Đếm Rep 9 Bài Tập Bằng Khung Xương AI</title>
-    <meta name="description" content="Đếm rep Squat, Hít đất, Plank và 6 bài khác tự động bằng AI khung xương qua camera, quay video kèm GPS. Miễn phí, chạy ngay trên trình duyệt, không cần cài đặt.">
+    <title>AI Pose Fitness - Đếm Rep 17 Bài Tập · Giáo Án Hằng Ngày · GPS</title>
+    <meta name="description" content="Giáo án tập hằng ngày theo chiều cao cân nặng, đốt mỡ HIIT, đếm rep 17 bài theo nhóm cơ tự động bằng AI khung xương qua camera, quay video kèm GPS. Miễn phí, chạy ngay trên trình duyệt, không cần cài đặt.">
     <meta name="theme-color" content="#0D0E12">
     <script>
         // Apply saved / system theme before first paint (no flash)
@@ -179,6 +179,17 @@
         <!-- ===================== CAMERA WORKOUT MODE ===================== -->
         <div id="mode-camera" class="mode-pane">
 
+        <!-- Daily plan & fat-burn programs (programs.js) -->
+        <section id="program-panel" class="program-panel" hidden>
+            <div id="profile-strip" class="profile-strip"></div>
+            <div id="today-card" class="today-card" hidden></div>
+            <div id="hiit-card" class="hiit-card" hidden></div>
+        </section>
+
+        <!-- Free training: muscle groups + exercises -->
+        <div class="free-head"><h3><i class="fa-solid fa-layer-group"></i> Tập tự do theo nhóm cơ</h3></div>
+        <nav id="group-tabs" class="group-tabs" aria-label="Nhóm cơ"></nav>
+
         <!-- Exercise Selector (rendered from exercises.js) -->
         <section id="exercise-picker" class="exercise-picker" aria-label="Chọn bài tập"></section>
 
@@ -246,9 +257,47 @@
                 </div>
             </div>
 
+            <!-- Guided workout countdown (rest / get ready / paused) -->
+            <div id="runner-overlay" class="runner-overlay" hidden>
+                <div id="runner-ov-label" class="runner-ov-label">NGHỈ</div>
+                <div id="runner-ov-num" class="runner-ov-num">30</div>
+                <div id="runner-ov-next" class="runner-ov-next"></div>
+                <button class="runner-ov-skip" onclick="Runner.skip()"><i class="fa-solid fa-forward"></i> Bỏ qua</button>
+            </div>
+
             <!-- Recording indicator -->
             <div id="rec-indicator" class="rec-indicator" hidden>
                 <span class="rec-dot"></span> REC <span id="rec-time">00:00</span>
+            </div>
+        </section>
+
+        <!-- Guided workout panel -->
+        <section id="runner-panel" class="runner-panel" hidden>
+            <div id="runner-live">
+                <div class="runner-top">
+                    <span id="runner-title"></span>
+                    <span><span id="runner-step"></span> · <i class="fa-regular fa-clock"></i> <span id="runner-elapsed">00:00</span></span>
+                </div>
+                <div class="runner-progress"><span id="runner-bar"></span></div>
+                <div class="runner-main">
+                    <div>
+                        <div id="runner-ex" class="runner-ex"></div>
+                        <div id="runner-sub" class="runner-sub"></div>
+                    </div>
+                    <div id="runner-count" class="runner-count">0</div>
+                </div>
+                <div id="runner-next" class="runner-next"></div>
+                <div class="runner-actions">
+                    <button id="runner-pause" class="btn btn-secondary" onclick="Runner.togglePause()"><i class="fa-solid fa-pause"></i> <span>Tạm dừng</span></button>
+                    <button class="btn btn-secondary" onclick="Runner.skip()"><i class="fa-solid fa-forward"></i> <span>Bỏ qua</span></button>
+                    <button class="btn btn-outline" onclick="Runner.quit()"><i class="fa-solid fa-xmark"></i> <span>Kết thúc</span></button>
+                </div>
+            </div>
+            <div id="runner-summary" class="runner-summary" hidden>
+                <div class="rs-icon"><i class="fa-solid fa-trophy"></i></div>
+                <h3>Hoàn thành buổi tập!</h3>
+                <p id="runner-summary-text"></p>
+                <button class="btn btn-primary" onclick="closeRunnerSummary()">Tuyệt vời</button>
             </div>
         </section>
 
@@ -380,6 +429,68 @@
         </div>
     </div>
 
+    <!-- Fitness profile / onboarding -->
+    <div id="profile-modal" class="rec-modal" role="dialog" aria-modal="true" aria-labelledby="profile-title" hidden>
+        <div class="rec-modal-card profile-card">
+            <div class="rec-modal-head">
+                <h3 id="profile-title">Hồ sơ tập luyện</h3>
+                <button id="profile-cancel" class="rec-close" onclick="closeProfileModal()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="profile-intro">Cho biết vài thông tin để Saitama tạo giáo án hằng ngày vừa sức và tính calo chính xác.</p>
+            <form id="profile-form" novalidate>
+                <div class="pf-row">
+                    <span class="pf-label">Giới tính</span>
+                    <div class="pf-choice" data-choice="sex">
+                        <button data-value="male"><i class="fa-solid fa-mars"></i> Nam</button>
+                        <button data-value="female"><i class="fa-solid fa-venus"></i> Nữ</button>
+                    </div>
+                </div>
+                <div class="pf-nums">
+                    <label><span>Tuổi</span><input name="age" type="number" inputmode="numeric" min="12" max="90" required></label>
+                    <label><span>Chiều cao (cm)</span><input name="height" type="number" inputmode="numeric" min="120" max="230" required></label>
+                    <label><span>Cân nặng (kg)</span><input name="weight" type="number" inputmode="decimal" step="0.1" min="30" max="250" required></label>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-label">Mục tiêu</span>
+                    <div class="pf-choice four" data-choice="goal">
+                        <button data-value="lose"><i class="fa-solid fa-fire"></i> Giảm mỡ</button>
+                        <button data-value="muscle"><i class="fa-solid fa-dumbbell"></i> Tăng cơ</button>
+                        <button data-value="fit"><i class="fa-solid fa-heart"></i> Giữ dáng</button>
+                        <button data-value="endurance"><i class="fa-solid fa-bolt"></i> Sức bền</button>
+                    </div>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-label">Trình độ</span>
+                    <div class="pf-choice" data-choice="level">
+                        <button data-value="beginner">Mới bắt đầu</button>
+                        <button data-value="intermediate">Trung bình</button>
+                        <button data-value="advanced">Nâng cao</button>
+                    </div>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-label">Thời gian tập mỗi ngày</span>
+                    <div class="pf-choice four" data-choice="minutes">
+                        <button data-value="10">10 phút</button>
+                        <button data-value="20">20 phút</button>
+                        <button data-value="30">30 phút</button>
+                        <button data-value="45">45 phút</button>
+                    </div>
+                </div>
+                <div class="pf-row">
+                    <span class="pf-label">Dụng cụ</span>
+                    <div class="pf-choice" data-choice="equipment">
+                        <button data-value="none"><i class="fa-solid fa-person"></i> Không có</button>
+                        <button data-value="dumbbell"><i class="fa-solid fa-dumbbell"></i> Có tạ đơn</button>
+                    </div>
+                </div>
+                <div id="profile-preview" class="profile-preview"></div>
+                <p id="profile-msg" class="auth-msg error" role="alert"></p>
+                <button type="submit" class="btn btn-primary profile-submit"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>Lưu & tạo giáo án</span></button>
+                <p class="rec-hint">Chỉ số BMI theo chuẩn châu Á; giáo án mang tính tham khảo, không thay thế tư vấn y tế.</p>
+            </form>
+        </div>
+    </div>
+
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <!-- Login / Sign-up overlay (shown until signed in) -->
@@ -436,5 +547,6 @@
     <script src="script.js"></script>
     <script src="recorder.js"></script>
     <script src="activity.js"></script>
+    <script src="programs.js"></script>
 </body>
 </html>

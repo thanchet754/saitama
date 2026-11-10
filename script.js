@@ -148,7 +148,7 @@ function renderExercisePicker() {
         const ex = EXERCISES[key];
         return `<button class="exercise-btn" data-ex="${key}" aria-pressed="false" onclick="selectExercise('${key}')">
             <span class="btn-icon-wrap"><i class="fa-solid ${ex.icon}"></i></span>
-            <span class="btn-info"><span class="ex-name">${ex.name}</span><span class="ex-sub">${ex.mode === 'hold' ? 'Tính giây' : ex.jointLabel}</span></span>
+            <span class="btn-info"><span class="ex-name">${ex.name}</span><span class="ex-sub">${groupOf(key)}${ex.mode === 'hold' ? ' · tính giây' : ''}${ex.equipment === 'dumbbell' ? ' · <i class="fa-solid fa-dumbbell" title="Cần tạ"></i>' : ''}</span></span>
         </button>`;
     }).join('');
 }
@@ -163,7 +163,10 @@ function renderGuide(cfg) {
 
 window.selectExercise = function (type) {
     if (!EXERCISES[type]) return;
-    if (type !== currentExercise) saveSession();
+    if (type !== currentExercise) {
+        saveSession();   // save the finished exercise under ITS name...
+        repCount = 0;    // ...so resetCounter() below doesn't re-save it under the new name
+    }
     currentExercise = type;
     const cfg = EXERCISES[type];
 
@@ -632,6 +635,7 @@ function updateStatsDisplay() {
     statCalsEl.textContent = `${cals} kcal`;
     const avg = averageForm();
     statAccuracyEl.textContent = avg === null ? '--' : `${avg}%`;
+    if (window.Runner) Runner.onProgress();
 }
 
 function formatTime(sec) {
@@ -830,6 +834,7 @@ function onUserChanged(user) {
             renderHistory();
             syncHistory();
             if (window.onActivitiesUserChanged) onActivitiesUserChanged();
+            if (window.onProgramsUserChanged) onProgramsUserChanged();
         }
     } else {
         if (isCameraActive) stopCamera();
@@ -839,6 +844,7 @@ function onUserChanged(user) {
         renderHistory();
         setSyncStatus('local', 'Chưa đăng nhập');
         if (window.onActivitiesUserChanged) onActivitiesUserChanged();
+        if (window.onProgramsUserChanged) onProgramsUserChanged();
         showAuth('login');
     }
 }

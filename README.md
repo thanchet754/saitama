@@ -22,6 +22,15 @@ Bản chạy thật: https://saitama-liart.vercel.app
 
 Bài tay (Curl, Đẩy vai, Nâng tạ ngang) cho chọn **Cả 2 tay / Tay phải / Tay trái**. Thêm bài mới: khai báo trong `exercises.js` (ngưỡng góc, hướng `up`/`down`, lời nhắc).
 
+## 📋 Giáo án hằng ngày & đốt mỡ
+
+- **Hồ sơ ban đầu** (hỏi 1 lần khi đăng ký): giới tính, tuổi, chiều cao, cân nặng, mục tiêu, trình độ, thời gian/ngày, có tạ hay không → tính BMI (chuẩn châu Á), cân nặng lý tưởng, BMR, calo nên ăn. Lưu ở bảng `saitama_profiles`.
+- **Giáo án hôm nay**: lịch tuần theo nhóm cơ (T2 Chân & Mông, T3 Ngực, T4 Cardio & Bụng, T5 Vai & Tay / Chân & Cardio nếu không có tạ, T6 Toàn thân, T7 Đốt mỡ, CN phục hồi). Số rep, số hiệp, thời gian nghỉ tự điều chỉnh theo trình độ, mục tiêu; người BMI cao chỉ nhận bài tác động thấp.
+- **Đốt mỡ HIIT** 7 / 15 / 20 / 30 phút, ước tính calo theo cân nặng.
+- **Tập có hướng dẫn**: tự chuyển bài, đếm rep bằng camera, đếm ngược chuẩn bị & nghỉ, giọng đọc, bỏ qua / tạm dừng; hoàn thành → chuỗi ngày tập 🔥.
+
+17 bài chia theo nhóm cơ: Chân & Mông, Ngực, Vai, Tay trước & sau, Bụng & Core, Cardio (`MUSCLE_GROUPS` trong `exercises.js`).
+
 ## 🏃 Hoạt động GPS (giống Strava)
 
 Tab **Chạy · Đạp xe (GPS)**: Chạy bộ, Đi bộ, Đạp xe, Đi xe.
