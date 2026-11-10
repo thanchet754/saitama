@@ -7,7 +7,7 @@ create table if not exists public.workout_sessions (
     id               uuid primary key default gen_random_uuid(),
     user_id          uuid not null default auth.uid() references auth.users (id) on delete cascade,
     client_id        bigint not null,                 -- id buổi tập sinh ở trình duyệt (để upsert, tránh trùng)
-    exercise         text not null check (exercise in ('SQUAT', 'CURL')),
+    exercise         text not null constraint workout_sessions_exercise_check check (exercise ~ '^[A-Z_]{2,30}$'),
     reps             integer not null check (reps >= 0 and reps <= 10000),
     duration_seconds integer not null default 0 check (duration_seconds >= 0),
     form_score       smallint check (form_score between 0 and 100),
@@ -15,6 +15,11 @@ create table if not exists public.workout_sessions (
     created_at       timestamptz not null default now(),
     unique (user_id, client_id)
 );
+
+-- Migration (2026-11): allow any exercise code (SQUAT, PUSHUP, PLANK...) instead of a fixed list
+alter table public.workout_sessions drop constraint if exists workout_sessions_exercise_check;
+alter table public.workout_sessions add constraint workout_sessions_exercise_check
+    check (exercise ~ '^[A-Z_]{2,30}$');
 
 create index if not exists workout_sessions_user_time_idx
     on public.workout_sessions (user_id, performed_at desc);

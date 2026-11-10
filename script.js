@@ -7,31 +7,7 @@ const HISTORY_KEY = 'aiPoseFitness.history';
 const HISTORY_LIMIT = 20;
 const VIS_THRESHOLD = 0.4;
 
-// Exercise configuration (thresholds in degrees)
-const EXERCISES = {
-    SQUAT: {
-        name: 'Squat',
-        jointLabel: 'Góc đầu gối',
-        top: 160,        // standing straight
-        target: 95,      // deep enough to count
-        perfect: 90,     // "perfect depth" for form score
-        gaugeStart: 170,
-        restLabel: 'UP (ĐỨNG)',
-        activeLabel: 'DOWN (ĐẠT)',
-        kcalPerRep: 0.35
-    },
-    CURL: {
-        name: 'Gập tạ',
-        jointLabel: 'Góc khuỷu tay',
-        top: 150,        // arm extended
-        target: 48,      // peak flexion
-        perfect: 45,
-        gaugeStart: 155,
-        restLabel: 'DOWN (DUỖI)',
-        activeLabel: 'UP (ĐỈNH GẬP)',
-        kcalPerRep: 0.30
-    }
-};
+// Exercise definitions & counting logic live in exercises.js
 
 // App State
 let currentExercise = 'SQUAT';
@@ -47,10 +23,6 @@ let durationSeconds = 0;
 let timerInterval = null;
 let formScores = [];
 let sessionId = Date.now();
-
-// Rep State Machine (shared by both exercises)
-let repStage = 'REST';    // 'REST' (top position) or 'ACTIVE' (target reached)
-let minAngleInRep = 180;
 
 // MediaPipe & WebRTC
 let poseInstance = null;
@@ -167,21 +139,44 @@ function speakRep(number) {
 // ==============================================================
 // EXERCISE & ARM SELECTOR
 // ==============================================================
+function renderExercisePicker() {
+    const picker = $('exercise-picker');
+    picker.innerHTML = EXERCISE_ORDER.map(key => {
+        const ex = EXERCISES[key];
+        return `<button class="exercise-btn" data-ex="${key}" aria-pressed="false" onclick="selectExercise('${key}')">
+            <span class="btn-icon-wrap"><i class="fa-solid ${ex.icon}"></i></span>
+            <span class="btn-info"><span class="ex-name">${ex.name}</span><span class="ex-sub">${ex.mode === 'hold' ? 'Tính giây' : ex.jointLabel}</span></span>
+        </button>`;
+    }).join('');
+}
+
+function renderGuide(cfg) {
+    $('guide-list').innerHTML = `
+        <li><strong>Đặt camera (${cfg.name}):</strong> ${cfg.view}</li>
+        <li><strong>Kỹ thuật:</strong> ${cfg.tip}</li>
+        <li><strong>Khoảng cách:</strong> Cách camera khoảng 1.5 - 2.5 mét để AI thấy đủ các khớp.</li>
+        <li><strong>Ánh sáng:</strong> Đứng nơi đủ sáng, tránh ngược sáng, mặc đồ tương phản với nền.</li>`;
+}
+
 window.selectExercise = function (type) {
     if (!EXERCISES[type]) return;
-    saveSession();
+    if (type !== currentExercise) saveSession();
     currentExercise = type;
     const cfg = EXERCISES[type];
 
-    $('btn-exercise-squat').classList.toggle('active', type === 'SQUAT');
-    $('btn-exercise-curl').classList.toggle('active', type === 'CURL');
-    $('btn-exercise-squat').setAttribute('aria-pressed', type === 'SQUAT');
-    $('btn-exercise-curl').setAttribute('aria-pressed', type === 'CURL');
+    document.querySelectorAll('#exercise-picker .exercise-btn').forEach(btn => {
+        const active = btn.dataset.ex === type;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', active);
+        if (active) btn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    });
 
-    armPickerRow.style.display = type === 'CURL' ? 'flex' : 'none';
+    armPickerRow.style.display = cfg.arm ? 'flex' : 'none';
 
     jointLabelEl.textContent = cfg.jointLabel;
-    targetTextEl.textContent = `Chuẩn: < ${cfg.target}°`;
+    targetTextEl.textContent = `Chuẩn: ${cfg.dir === 'down' ? '<' : '>'} ${cfg.target}°`;
+    $('hud-rep-label').textContent = cfg.mode === 'hold' ? 'SỐ GIÂY' : 'SỐ LẦN (REPS)';
+    renderGuide(cfg);
 
     resetCounter();
 };
@@ -328,6 +323,7 @@ function stopStream() {
 }
 
 function stopCamera() {
+    if (typeof isRecording !== 'undefined' && isRecording) stopRecording();
     loopToken++;
     isCameraActive = false;
     stopTimer();
@@ -376,8 +372,7 @@ window.resetCounter = function () {
     repCount = 0;
     durationSeconds = 0;
     formScores = [];
-    repStage = 'REST';
-    minAngleInRep = 180;
+    resetExerciseState();
 
     repNumberEl.textContent = '0';
     statTimeEl.textContent = '00:00';
@@ -457,6 +452,11 @@ function syncCanvasSize() {
 
 function onPoseResults(results) {
     if (!isCameraActive) return;
+    renderPoseFrame(results);
+    if (typeof composeRecordingFrame === 'function') composeRecordingFrame();
+}
+
+function renderPoseFrame(results) {
     if (canvasEl.width !== videoEl.videoWidth || canvasEl.height !== videoEl.videoHeight) syncCanvasSize();
 
     const width = canvasEl.width;
@@ -479,11 +479,7 @@ function onPoseResults(results) {
     const lm = results.poseLandmarks;
     drawNeonSkeleton(canvasCtx, lm, width, height);
 
-    if (currentExercise === 'SQUAT') {
-        processSquat(lm, width, height);
-    } else {
-        processBicepCurl(lm, width, height);
-    }
+    processExercise(lm, width, height);
 }
 
 const SKELETON_PAIRS = [
@@ -602,84 +598,6 @@ function pickSide(lm, leftIdx, rightIdx, mode) {
 }
 
 // ==============================================================
-// REP COUNTING (shared state machine)
-// ==============================================================
-function processRep(angle, msgs) {
-    const cfg = EXERCISES[currentExercise];
-
-    const pct = Math.max(0, Math.min(100, Math.round(((cfg.gaugeStart - angle) / (cfg.gaugeStart - cfg.target)) * 100)));
-    angleValEl.textContent = `${angle}°`;
-    gaugeFillEl.style.width = `${pct}%`;
-
-    if (angle > cfg.top) {
-        if (repStage === 'ACTIVE') {
-            repCount++;
-            repStage = 'REST';
-            formScores.push(minAngleInRep <= cfg.perfect ? 100 : 80);
-            updateStatsDisplay();
-            triggerRepAnimation();
-            playBeep(800, 0.12);
-            speakRep(repCount);
-            setFeedback(msgs.counted(minAngleInRep), 'good');
-            minAngleInRep = 180;
-        } else {
-            minAngleInRep = 180;
-            setFeedback(msgs.rest, 'ready');
-        }
-        stageBadgeEl.textContent = cfg.restLabel;
-    } else if (angle <= cfg.target) {
-        repStage = 'ACTIVE';
-        minAngleInRep = Math.min(minAngleInRep, angle);
-        stageBadgeEl.textContent = cfg.activeLabel;
-        setFeedback(msgs.reached, 'good');
-    } else {
-        minAngleInRep = Math.min(minAngleInRep, angle);
-        if (repStage === 'REST') {
-            setFeedback(msgs.deeper, 'warning');
-        } else {
-            setFeedback(msgs.returning, 'ready');
-        }
-    }
-}
-
-function processSquat(lm, width, height) {
-    const side = pickSide(lm, [23, 25, 27], [24, 26, 28], 'BOTH');
-    if (!side) {
-        setFeedback('Hãy lùi lại để camera thấy từ hông tới bàn chân', 'ready');
-        return;
-    }
-    const v = toPx(side.vertex, width, height);
-    drawJointAngleLabel(canvasCtx, v.x, v.y, side.angle, side.angle <= EXERCISES.SQUAT.target);
-
-    processRep(side.angle, {
-        counted: (a) => `Tuyệt vời! +1 Rep (Sâu: ${a}°)`,
-        rest: 'Đang đứng thẳng. Hãy ngồi xổm xuống!',
-        reached: 'Đã đạt chuẩn sâu! Đứng thẳng dậy nào!',
-        deeper: `Xuống sâu hơn nữa (< ${EXERCISES.SQUAT.target}°)!`,
-        returning: 'Đứng thẳng hẳn lên để tính rep!'
-    });
-}
-
-function processBicepCurl(lm, width, height) {
-    const side = pickSide(lm, [11, 13, 15], [12, 14, 16], selectedArmMode);
-    if (!side) {
-        const which = selectedArmMode === 'LEFT' ? 'tay trái' : selectedArmMode === 'RIGHT' ? 'tay phải' : 'cánh tay';
-        setFeedback(`Hãy đứng để camera thấy rõ ${which} và khuỷu tay`, 'ready');
-        return;
-    }
-    const v = toPx(side.vertex, width, height);
-    drawJointAngleLabel(canvasCtx, v.x, v.y, side.angle, side.angle <= EXERCISES.CURL.target);
-
-    processRep(side.angle, {
-        counted: (a) => `Chuẩn đỉnh! +1 Rep (Gập: ${a}°)`,
-        rest: 'Tay duỗi thẳng. Gập tạ lên nào!',
-        reached: 'Đã đạt đỉnh gập! Hạ tạ có kiểm soát!',
-        deeper: `Gập cao hơn nữa (< ${EXERCISES.CURL.target}°)!`,
-        returning: 'Duỗi thẳng tay hẳn xuống để tính rep!'
-    });
-}
-
-// ==============================================================
 // UI HELPERS
 // ==============================================================
 let lastFeedback = '';
@@ -706,7 +624,7 @@ function averageForm() {
 
 function updateStatsDisplay() {
     repNumberEl.textContent = repCount;
-    const cals = Math.round(repCount * EXERCISES[currentExercise].kcalPerRep * 10) / 10;
+    const cals = Math.round(repCount * EXERCISES[currentExercise].kcal * 10) / 10;
     statCalsEl.textContent = `${cals} kcal`;
     const avg = averageForm();
     statAccuracyEl.textContent = avg === null ? '--' : `${avg}%`;
@@ -1076,10 +994,10 @@ function renderHistory() {
         const d = new Date(h.date);
         const when = `${d.toLocaleDateString('vi-VN')} ${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
         const name = EXERCISES[h.exercise]?.name || h.exercise;
-        const icon = h.exercise === 'SQUAT' ? 'fa-person-arrow-down-to-line' : 'fa-dumbbell';
+        const icon = EXERCISES[h.exercise]?.icon || 'fa-dumbbell';
         return `<li>
             <span class="h-name"><i class="fa-solid ${icon}"></i> ${name}</span>
-            <span class="h-reps">${h.reps} rep</span>
+            <span class="h-reps">${h.reps} ${unitOf(h.exercise)}</span>
             <span class="h-meta">${formatTime(h.duration || 0)} · ${h.form ?? '--'}%</span>
             <span class="h-date">${when}${h.synced ? '' : ' <i class="fa-solid fa-cloud-arrow-up" title="Chưa đồng bộ"></i>'}</span>
         </li>`;
@@ -1101,6 +1019,7 @@ window.addEventListener('pagehide', saveSession);
 
 // Initial Setup
 document.addEventListener('DOMContentLoaded', () => {
+    renderExercisePicker();
     selectExercise('SQUAT');
     renderHistory();
     initAuth();

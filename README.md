@@ -1,41 +1,51 @@
-# AI Pose Fitness - Đếm Squat & Gập Tạ Bằng Khung Xương AI
+# AI Pose Fitness - Đếm Rep 9 Bài Tập Bằng Khung Xương AI
 
-Web App chuyên biệt ứng dụng trí tuệ nhân tạo (Google MediaPipe Pose) để **đếm số lần Squat** và **đếm số lần Gập tạ tay (Bicep Curl)** tự động theo thời gian thực qua Camera.
+Web app dùng Google MediaPipe Pose để **đếm rep tự động qua camera** cho 9 bài tập, lưu lịch sử lên Supabase và **quay video buổi tập** kèm thông tin thiết bị, GPS, thời gian.
 
----
-
-## 🚀 Tính Năng Chính
-
-### 1. 🏋️‍♂️ Đếm Squat AI (Đứng lên ngồi xuống)
-- Nhận diện khớp hông, đầu gối, cổ chân.
-- Đo góc gập đầu gối và hiển thị góc động ngay trên cơ thể.
-- Đứng thẳng (> 160°) -> Ngồi xổm sâu (<= 95°) -> Đứng thẳng dậy: **Tự động tăng +1 Rep!**
-- Lời nhắc tư thế thông minh: báo khi chưa hạ đủ độ sâu hoặc đứng chưa thẳng.
-
-### 2. 💪 Đếm Gập Tạ Tay AI (Bicep Curl)
-- Nhận diện khớp vai, khuỷu tay, cổ tay.
-- Hỗ trợ chọn: **Cả 2 tay**, **Tay phải** hoặc **Tay trái**.
-- Duỗi tay thẳng (> 150°) -> Gập tạ lên đỉnh (<= 48°) -> Hạ tạ duỗi thẳng: **Tự động tăng +1 Rep!**
-
-### 3. 🎯 Trải Nghiệm Người Dùng
-- **Giao diện tối giản, bấm là ăn ngay**, không có modal hay lớp phủ che màn hình.
-- **Khung xương Neon Cyberpunk** phát sáng đẹp mắt.
-- **Âm thanh giọng đọc tiếng Việt**: Tự động đếm "Một", "Hai", "Ba"... bằng Web Speech API và âm thanh beep chuẩn xác.
-- **Đổi camera trước / sau** thuận tiện trên cả điện thoại di động và máy tính.
-- **Thống kê buổi tập**: Số rep, thời gian tập, calo tiêu hao, độ chuẩn form.
-- **Lịch sử tập luyện**: Tự lưu 20 buổi tập gần nhất ngay trên trình duyệt (localStorage).
-- **Giữ màn hình sáng** khi đang tập (Screen Wake Lock API) để điện thoại không tự tắt màn hình.
-- **Riêng tư**: Mọi xử lý AI chạy trên thiết bị, hình ảnh camera không gửi đi đâu.
+Bản chạy thật: https://saitama-liart.vercel.app
 
 ---
 
-## 💻 Cách Khởi Chạy
+## 🏋️ Bài tập hỗ trợ
 
-### Chạy trực tiếp trên máy:
+| Bài | Khớp đo | Tính 1 rep khi | Đặt camera |
+|---|---|---|---|
+| Squat | Góc gối | Đứng (> 160°) → ngồi (≤ 95°) → đứng | Trước / chéo 45° |
+| Chùng chân (Lunge) | Góc gối trước | > 160° → ≤ 100° → > 160° | Bên cạnh / chéo |
+| Hít đất (Push-up) | Góc khuỷu | > 150° → ≤ 90° → > 150°, thân nằm ngang | Bên cạnh, sát sàn |
+| Gập tạ tay (Curl) | Góc khuỷu | > 150° → ≤ 48° → > 150° | Trước / nghiêng |
+| Đẩy vai (Press) | Góc khuỷu | < 100° → ≥ 155° (cổ tay trên vai) → < 100° | Trước |
+| Nâng tạ ngang | Góc vai | < 35° → ≥ 80° → < 35° | Trước |
+| Bật nhảy (Jumping Jack) | Góc vai | < 50° → ≥ 140° → < 50° | Trước, lùi xa |
+| Gập bụng (Sit-up) | Góc hông | > 115° → ≤ 70° → > 115° | Bên cạnh, sát sàn |
+| Plank | Vai - hông - gót | Đếm giây khi thân thẳng (≥ 160°) và nằm ngang | Bên cạnh, sát sàn |
+
+Bài tay (Curl, Đẩy vai, Nâng tạ ngang) cho chọn **Cả 2 tay / Tay phải / Tay trái**. Thêm bài mới: khai báo trong `exercises.js` (ngưỡng góc, hướng `up`/`down`, lời nhắc).
+
+## ✨ Tính năng
+
+- **Đăng nhập** email + mật khẩu (sẵn sàng cho Google), trình duyệt nhớ đăng nhập.
+- **Lịch sử tập luyện** lưu trên Supabase (RLS từng người), có cache offline và tự đồng bộ lại.
+- **Quay video buổi tập**: camera + khung xương + số rep, kèm thời gian, tên thiết bị (tự nhận diện hoặc tự đặt), tọa độ GPS và tên địa điểm. Xem lại, tải về (MP4/WebM) hoặc chia sẻ. Video chỉ lưu trên máy.
+- **Giọng đọc tiếng Việt** đếm số, âm beep, nhắc tư thế theo từng bài.
+- **Nền sáng / tối**, tối ưu điện thoại dọc 9:16, giữ màn hình sáng khi tập.
+- **Riêng tư**: AI chạy trên thiết bị; hình ảnh camera không gửi đi đâu. Khi bật "Ghi tên địa điểm", tọa độ được gửi tới BigDataCloud để tra tên.
+
+## 📁 Cấu trúc
+
+- `index.html`, `style.css` - giao diện
+- `exercises.js` - thư viện bài tập & logic đếm
+- `script.js` - camera, MediaPipe, theme, đăng nhập, lịch sử
+- `recorder.js` - quay video + GPS + tên thiết bị
+- `supabase/schema.sql` - bảng `workout_sessions` + RLS
+
+## 💻 Chạy trên máy
+
 ```bash
-python -m http.server 8000
+python -m http.server 8765
 ```
-Mở trình duyệt: `http://localhost:8000`
+Mở `http://localhost:8765` (cổng này đã có trong danh sách redirect của Supabase Auth).
 
-### Triển khai (Deploy):
-Upload thư mục này lên GitHub, Vercel, Netlify hoặc GitHub Pages là có thể chạy ngay với giao thức HTTPS!
+## 🚀 Deploy
+
+Push lên nhánh `main` của GitHub → Vercel tự deploy. Trên máy có sẵn `deploy.bat` (pull + commit + push).

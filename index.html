@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AI Pose Fitness - Đếm Squat & Gập Tạ Bằng Khung Xương</title>
-    <meta name="description" content="Đếm số lần Squat và Gập tạ tay tự động bằng AI khung xương qua camera. Miễn phí, chạy ngay trên trình duyệt, không cần cài đặt.">
+    <title>AI Pose Fitness - Đếm Rep 9 Bài Tập Bằng Khung Xương AI</title>
+    <meta name="description" content="Đếm rep Squat, Hít đất, Plank và 6 bài khác tự động bằng AI khung xương qua camera, quay video kèm GPS. Miễn phí, chạy ngay trên trình duyệt, không cần cài đặt.">
     <meta name="theme-color" content="#0D0E12">
     <script>
         // Apply saved / system theme before first paint (no flash)
@@ -18,7 +18,7 @@
             document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#F2F4F8' : '#0D0E12');
         })();
     </script>
-    <meta property="og:title" content="AI Pose Fitness - Đếm Squat & Gập Tạ">
+    <meta property="og:title" content="AI Pose Fitness - Đếm Rep Bằng AI">
     <meta property="og:description" content="AI vẽ khung xương và đếm rep tự động qua camera điện thoại hoặc máy tính.">
     <meta property="og:type" content="website">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230D0E12'/%3E%3Cpath d='M58 8 26 56h22l-6 36 32-48H52z' fill='%23FF5E3A'/%3E%3C/svg%3E">
@@ -48,7 +48,7 @@
                 <i class="fa-solid fa-bolt-lightning logo-icon"></i>
                 <div class="logo-text">
                     <h1>AI POSE TRACKER</h1>
-                    <span>Đếm Squat & Gập Tạ Bằng Khung Xương</span>
+                    <span>Đếm rep 9 bài tập bằng khung xương AI</span>
                 </div>
             </div>
             <div class="header-actions">
@@ -68,26 +68,10 @@
             <button class="account-logout" onclick="signOut()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
         </div>
 
-        <!-- Exercise Selector (2 Bài tập chính) -->
-        <section class="exercise-picker">
-            <button id="btn-exercise-squat" class="exercise-btn active" aria-pressed="true" onclick="selectExercise('SQUAT')">
-                <div class="btn-icon-wrap"><i class="fa-solid fa-person-arrow-down-to-line"></i></div>
-                <div class="btn-info">
-                    <h3>ĐẾM SQUAT</h3>
-                    <p>Đứng lên ngồi xuống (Đo góc gối)</p>
-                </div>
-            </button>
+        <!-- Exercise Selector (rendered from exercises.js) -->
+        <section id="exercise-picker" class="exercise-picker" aria-label="Chọn bài tập"></section>
 
-            <button id="btn-exercise-curl" class="exercise-btn" aria-pressed="false" onclick="selectExercise('CURL')">
-                <div class="btn-icon-wrap"><i class="fa-solid fa-dumbbell"></i></div>
-                <div class="btn-info">
-                    <h3>ĐẾM GẬP TẠ TAY</h3>
-                    <p>Bicep Curl (Đo góc khuỷu tay)</p>
-                </div>
-            </button>
-        </section>
-
-        <!-- Sub-selector for Arm mode (only for Bicep Curl) -->
+        <!-- Sub-selector for Arm mode (arm exercises only) -->
         <div id="arm-picker-row" class="arm-picker-row" style="display: none;">
             <span class="label"><i class="fa-solid fa-hand-fist"></i> Chọn tay:</span>
             <div class="arm-buttons">
@@ -125,7 +109,7 @@
             <div id="stage-hud" class="stage-hud" style="display: none;">
                 <!-- Rep Counter -->
                 <div class="hud-rep-card">
-                    <span class="hud-label">SỐ LẦN (REPS)</span>
+                    <span id="hud-rep-label" class="hud-label">SỐ LẦN (REPS)</span>
                     <span id="hud-rep-number" class="hud-rep-val">0</span>
                 </div>
 
@@ -150,6 +134,11 @@
                     <span id="hud-feedback-text">Đứng lùi lại để camera thấy toàn thân</span>
                 </div>
             </div>
+
+            <!-- Recording indicator -->
+            <div id="rec-indicator" class="rec-indicator" hidden>
+                <span class="rec-dot"></span> REC <span id="rec-time">00:00</span>
+            </div>
         </section>
 
         <!-- Main Action Controls -->
@@ -162,6 +151,10 @@
                 <i class="fa-solid fa-camera-rotate"></i> <span>Đổi Camera</span>
             </button>
 
+            <button id="btn-record" class="btn btn-secondary btn-record" onclick="toggleRecording()" title="Quay video buổi tập (kèm thiết bị, GPS, thời gian)">
+                <i class="fa-solid fa-circle-dot"></i> <span>Quay video</span>
+            </button>
+
             <button id="btn-toggle-voice" class="btn btn-secondary active" onclick="toggleVoice()" title="Bật/Tắt giọng đọc số">
                 <i class="fa-solid fa-volume-high"></i> <span>Giọng: BẬT</span>
             </button>
@@ -170,6 +163,27 @@
                 <i class="fa-solid fa-rotate-left"></i> <span>Reset 0</span>
             </button>
         </section>
+
+        <!-- Recording settings -->
+        <details class="rec-settings">
+            <summary><i class="fa-solid fa-video"></i> Cài đặt quay video <i class="fa-solid fa-chevron-down rec-chevron"></i></summary>
+            <div class="rec-settings-body">
+                <label class="rec-field">
+                    <span>Tên thiết bị hiển thị trong video</span>
+                    <input id="rec-device-name" type="text" maxlength="60" placeholder="Tự nhận diện" autocomplete="off">
+                </label>
+                <p class="rec-hint">Tự nhận diện: <strong id="rec-detected-device">...</strong>. Để trống để dùng tên này.</p>
+                <label class="rec-check">
+                    <input id="rec-gps" type="checkbox" checked>
+                    <span>Ghi tọa độ GPS vào video</span>
+                </label>
+                <label class="rec-check">
+                    <input id="rec-address" type="checkbox" checked>
+                    <span>Ghi tên địa điểm (tọa độ được gửi tới BigDataCloud để tra tên địa điểm)</span>
+                </label>
+                <p class="rec-hint">Video chỉ lưu trên máy bạn, không tải lên máy chủ.</p>
+            </div>
+        </details>
 
         <!-- Workout Stats Grid -->
         <section class="stats-panel">
@@ -204,18 +218,31 @@
         <!-- Instructions Card -->
         <section class="guide-panel">
             <h3><i class="fa-solid fa-lightbulb"></i> Mẹo Đạt Chuẩn AI</h3>
-            <ul id="guide-list">
-                <li><strong>Góc đặt camera:</strong> Đặt điện thoại hoặc máy tính cách bạn khoảng 1.5 - 2 mét.</li>
-                <li><strong>Ánh sáng:</strong> Đứng ở nơi đủ sáng để AI dễ dàng nhận diện các khớp cơ thể.</li>
-                <li><strong>Squat:</strong> Hạ mông ngồi xổm sâu (đùi song song hoặc thấp hơn đầu gối) rồi đứng thẳng dậy để được tính 1 rep.</li>
-                <li><strong>Gập tạ:</strong> Duỗi thẳng tay xuống, sau đó gập tạ sát ngực rồi hạ tạ có kiểm soát.</li>
-            </ul>
+            <ul id="guide-list"></ul>
         </section>
 
         <footer class="app-footer">
-            Mọi xử lý AI chạy ngay trên thiết bị của bạn. Hình ảnh camera không được gửi đi đâu.
+            Mọi xử lý AI chạy ngay trên thiết bị của bạn. Hình ảnh camera và video quay lại không được gửi đi đâu.
         </footer>
     </div>
+
+    <!-- Recorded video preview -->
+    <div id="rec-modal" class="rec-modal" role="dialog" aria-modal="true" aria-labelledby="rec-modal-title" hidden>
+        <div class="rec-modal-card">
+            <div class="rec-modal-head">
+                <h3 id="rec-modal-title"><i class="fa-solid fa-film"></i> Video Buổi Tập</h3>
+                <button class="rec-close" onclick="closeRecModal()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <video id="rec-preview" controls playsinline></video>
+            <p id="rec-meta" class="rec-meta"></p>
+            <div class="rec-actions">
+                <a id="rec-download" class="btn btn-primary" download><i class="fa-solid fa-download"></i> <span>Tải video</span></a>
+                <button id="rec-share" class="btn btn-secondary" onclick="shareRecording()" hidden><i class="fa-solid fa-share-nodes"></i> <span>Chia sẻ</span></button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <!-- Login / Sign-up overlay (shown until signed in) -->
     <div id="auth-overlay" class="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -266,6 +293,8 @@
     </div>
 
     <!-- App Script -->
+    <script src="exercises.js"></script>
     <script src="script.js"></script>
+    <script src="recorder.js"></script>
 </body>
 </html>
