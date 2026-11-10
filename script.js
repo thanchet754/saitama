@@ -64,6 +64,38 @@ const $ = (id) => document.getElementById(id);
 const videoEl = $('video-element');
 const canvasEl = $('output-canvas');
 const canvasCtx = canvasEl.getContext('2d');
+const stageEl = $('camera-stage');
+
+// ==============================================================
+// LIGHT / DARK THEME
+// ==============================================================
+const THEME_KEY = 'aiPoseFitness.theme';
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#F2F4F8' : '#0D0E12');
+    document.querySelectorAll('.theme-icon').forEach(i => {
+        i.className = `fa-solid ${theme === 'light' ? 'fa-sun' : 'fa-moon'} theme-icon`;
+    });
+}
+
+window.toggleTheme = function () {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+    applyTheme(next);
+};
+
+applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
+// Follow the system theme until the user picks one
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', (e) => {
+        let saved = null;
+        try { saved = localStorage.getItem(THEME_KEY); } catch (err) {}
+        if (!saved) applyTheme(e.matches ? 'light' : 'dark');
+    });
+}
 
 const placeholderEl = $('camera-placeholder');
 const placeholderTitleEl = $('placeholder-title');
@@ -238,19 +270,21 @@ async function startCamera() {
         stopStream();
 
         loaderTextEl.textContent = 'Đang mở Camera...';
+        // Portrait phones (9:16) get a portrait 3:4 stream, desktops 4:3
+        const portrait = isPortraitScreen();
         activeMediaStream = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: currentFacingMode,
-                width: { ideal: 640 },
-                height: { ideal: 480 }
+                width: { ideal: portrait ? 720 : 960 },
+                height: { ideal: portrait ? 960 : 720 },
+                aspectRatio: { ideal: portrait ? 3 / 4 : 4 / 3 }
             },
             audio: false
         });
         videoEl.srcObject = activeMediaStream;
         await videoEl.play();
 
-        canvasEl.width = videoEl.videoWidth || 640;
-        canvasEl.height = videoEl.videoHeight || 480;
+        syncCanvasSize();
 
         await getPoseModel();
         if (myToken !== loopToken) return; // superseded by another start/stop
@@ -304,6 +338,7 @@ function stopCamera() {
     showPlaceholder('Camera Đang Tắt', 'Bấm nút <strong>"BẬT CAMERA & BẮT ĐẦU"</strong> bên dưới để AI tự động vẽ khung xương và đếm số rep cho bạn!');
     hudEl.style.display = 'none';
     canvasCtx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    stageEl.style.removeProperty('--stage-ratio');
 
     btnToggleCamera.innerHTML = '<i class="fa-solid fa-play"></i> <span>BẬT CAMERA & BẮT ĐẦU</span>';
     btnToggleCamera.classList.remove('running');
@@ -405,8 +440,24 @@ function toPx(p, width, height) {
 
 const isVisible = (p) => !!p && (p.visibility ?? 1) > VIS_THRESHOLD;
 
+function isPortraitScreen() {
+    return window.matchMedia('(orientation: portrait)').matches && window.innerWidth <= 820;
+}
+
+// Match canvas resolution + stage shape to the real video (handles rotation)
+function syncCanvasSize() {
+    const w = videoEl.videoWidth || 640;
+    const h = videoEl.videoHeight || 480;
+    if (canvasEl.width !== w || canvasEl.height !== h) {
+        canvasEl.width = w;
+        canvasEl.height = h;
+    }
+    stageEl.style.setProperty('--stage-ratio', `${w} / ${h}`);
+}
+
 function onPoseResults(results) {
     if (!isCameraActive) return;
+    if (canvasEl.width !== videoEl.videoWidth || canvasEl.height !== videoEl.videoHeight) syncCanvasSize();
 
     const width = canvasEl.width;
     const height = canvasEl.height;

@@ -6,6 +6,18 @@
     <title>AI Pose Fitness - Đếm Squat & Gập Tạ Bằng Khung Xương</title>
     <meta name="description" content="Đếm số lần Squat và Gập tạ tay tự động bằng AI khung xương qua camera. Miễn phí, chạy ngay trên trình duyệt, không cần cài đặt.">
     <meta name="theme-color" content="#0D0E12">
+    <script>
+        // Apply saved / system theme before first paint (no flash)
+        (function () {
+            var t = null;
+            try { t = localStorage.getItem('aiPoseFitness.theme'); } catch (e) {}
+            if (t !== 'light' && t !== 'dark') {
+                t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+            document.documentElement.setAttribute('data-theme', t);
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#F2F4F8' : '#0D0E12');
+        })();
+    </script>
     <meta property="og:title" content="AI Pose Fitness - Đếm Squat & Gập Tạ">
     <meta property="og:description" content="AI vẽ khung xương và đếm rep tự động qua camera điện thoại hoặc máy tính.">
     <meta property="og:type" content="website">
@@ -39,9 +51,14 @@
                     <span>Đếm Squat & Gập Tạ Bằng Khung Xương</span>
                 </div>
             </div>
-            <div id="ai-status-badge" class="status-badge ready">
-                <span class="dot"></span>
-                <span id="ai-status-text">AI Đã Sẵn Sàng</span>
+            <div class="header-actions">
+                <div id="ai-status-badge" class="status-badge ready">
+                    <span class="dot"></span>
+                    <span id="ai-status-text">AI Đã Sẵn Sàng</span>
+                </div>
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="Đổi nền sáng / tối" title="Đổi nền sáng / tối">
+                    <i class="fa-solid fa-moon theme-icon"></i>
+                </button>
             </div>
         </header>
 
@@ -81,7 +98,7 @@
         </div>
 
         <!-- Camera & Canvas Display Stage -->
-        <section class="camera-stage">
+        <section id="camera-stage" class="camera-stage">
             <!-- Hidden video input -->
             <video id="video-element" playsinline webkit-playsinline muted style="display: none;"></video>
             
@@ -202,6 +219,9 @@
 
     <!-- Login / Sign-up overlay (shown until signed in) -->
     <div id="auth-overlay" class="auth-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button class="theme-toggle auth-theme-toggle" onclick="toggleTheme()" aria-label="Đổi nền sáng / tối" title="Đổi nền sáng / tối">
+            <i class="fa-solid fa-moon theme-icon"></i>
+        </button>
         <div class="auth-card">
             <div class="auth-logo">
                 <i class="fa-solid fa-bolt-lightning logo-icon"></i>

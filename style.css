@@ -17,6 +17,25 @@
     --radius-md: 14px;
     --radius-sm: 10px;
     --transition: all 0.25s ease;
+    --surface-soft: rgba(255, 255, 255, 0.06);
+    --border-soft: rgba(255, 255, 255, 0.12);
+    --stage-ratio: 4 / 3;
+    color-scheme: dark;
+}
+
+/* ---------- Light theme ---------- */
+:root[data-theme="light"] {
+    --bg-dark: #F2F4F8;
+    --card-dark: #FFFFFF;
+    --card-border: rgba(15, 23, 42, 0.10);
+    --neon-cyan: #0891B2;
+    --neon-green: #059669;
+    --neon-orange: #D97706;
+    --text-white: #0F172A;
+    --text-muted: #5B6476;
+    --surface-soft: rgba(15, 23, 42, 0.05);
+    --border-soft: rgba(15, 23, 42, 0.14);
+    color-scheme: light;
 }
 
 * {
@@ -984,6 +1003,73 @@ body.auth-open { overflow: hidden; }
     padding-top: 12px;
 }
 
+/* Header actions & theme toggle */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-toggle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--card-border);
+    background: var(--card-dark);
+    color: var(--text-white);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.theme-toggle:hover { border-color: var(--neon-cyan); color: var(--neon-cyan); }
+
+.auth-theme-toggle {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    right: 14px;
+    z-index: 101;
+}
+
+/* Light theme: surfaces that use hard-coded dark-mode colors */
+[data-theme="light"] .logo-text h1 {
+    background: linear-gradient(90deg, #0F172A, var(--neon-cyan));
+    -webkit-background-clip: text;
+}
+[data-theme="light"] .btn-icon-wrap,
+[data-theme="light"] .arm-btn,
+[data-theme="light"] .history-list li { background: var(--surface-soft); border-color: var(--card-border); }
+[data-theme="light"] .arm-btn.active { background: var(--neon-cyan); color: #FFF; }
+[data-theme="light"] .exercise-btn.active { box-shadow: 0 6px 20px rgba(8, 145, 178, 0.18); }
+[data-theme="light"] .camera-stage { background: #E8ECF3; border-color: var(--card-border); box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15); }
+[data-theme="light"] .camera-placeholder { background: radial-gradient(circle, #FFFFFF 0%, #E8ECF3 85%); }
+[data-theme="light"] .camera-placeholder h3,
+[data-theme="light"] .stat-number,
+[data-theme="light"] .history-list .h-name,
+[data-theme="light"] .account-user #account-email { color: var(--text-white); }
+[data-theme="light"] .btn-outline { border-color: var(--border-soft); }
+[data-theme="light"] .btn-outline:hover,
+[data-theme="light"] .account-logout:hover { color: var(--text-white); border-color: var(--text-white); }
+[data-theme="light"] .auth-overlay {
+    background: radial-gradient(circle at 50% 20%, rgba(8, 145, 178, 0.10), transparent 60%), rgba(242, 244, 248, 0.97);
+}
+[data-theme="light"] .auth-card { box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15); }
+[data-theme="light"] .auth-field input { background: var(--surface-soft); border-color: var(--border-soft); color: var(--text-white); }
+[data-theme="light"] .btn-google { border: 1px solid var(--border-soft); }
+[data-theme="light"] .status-badge { background: rgba(8, 145, 178, 0.08); border-color: rgba(8, 145, 178, 0.3); }
+[data-theme="light"] .camera-loader { background: rgba(242, 244, 248, 0.94); }
+[data-theme="light"] .camera-loader p { color: var(--text-white); }
+
+/* Camera stage follows the real video aspect ratio */
+.camera-stage {
+    aspect-ratio: var(--stage-ratio);
+    max-height: none;
+}
+
 /* Footer */
 .app-footer {
     text-align: center;
@@ -999,21 +1085,89 @@ body.auth-open { overflow: hidden; }
     }
 }
 
-/* Responsive adjustments for Mobile */
-@media (max-width: 540px) {
-    .controls-panel {
-        grid-template-columns: 1fr 1fr;
-    }
-    #btn-toggle-camera {
-        grid-column: span 2;
-        height: 56px;
-        font-size: 15px;
-    }
-    .hud-gauge-card {
-        width: 170px;
-        padding: 8px 10px;
-    }
-    .hud-rep-val {
-        font-size: 46px;
+/* Desktop: keep the stage from growing taller than the screen */
+@media (min-width: 541px) {
+    .camera-stage {
+        max-height: 72vh;
+        max-width: calc(72vh * (var(--stage-ratio)));
+        margin: 0 auto;
     }
 }
+
+/* ---------- Phone portrait (9:16, e.g. 1080x1920 FullHD) ---------- */
+@media (max-width: 540px) {
+    body {
+        padding: max(10px, env(safe-area-inset-top)) 10px max(12px, env(safe-area-inset-bottom));
+    }
+    .main-wrapper { gap: 10px; }
+
+    .app-header { padding: 2px 2px; }
+    .logo { gap: 8px; }
+    .logo-icon { font-size: 22px; }
+    .logo-text h1 { font-size: 17px; }
+    .logo-text span { display: none; }
+    .status-badge { padding: 5px 9px; font-size: 10px; }
+
+    .account-bar { padding: 6px 10px; }
+
+    .exercise-picker { gap: 8px; }
+    .exercise-btn { padding: 10px; gap: 10px; border-radius: 12px; }
+    .exercise-btn:hover { transform: none; }
+    .btn-icon-wrap { width: 36px; height: 36px; font-size: 16px; }
+    .btn-info h3 { font-size: 13px; }
+    .btn-info p { display: none; }
+
+    .arm-picker-row { padding: 8px 10px; }
+    .arm-picker-row .label { display: none; }
+    .arm-buttons { width: 100%; }
+    .arm-btn { flex: 1; padding: 8px 6px; }
+
+    /* Big portrait camera: fill most of a 9:16 screen */
+    .camera-stage {
+        --stage-ratio: 3 / 4;
+        aspect-ratio: var(--stage-ratio);
+        max-height: 58dvh;
+        border-radius: 16px;
+        margin: 0 auto;
+        max-width: calc(58dvh * (var(--stage-ratio)));
+    }
+    .stage-hud { padding: 10px; }
+    .hud-rep-card { padding: 6px 14px; }
+    .hud-rep-val { font-size: 44px; }
+    .hud-gauge-card { width: 156px; padding: 8px 10px; gap: 6px; }
+    #hud-angle-val { font-size: 16px; }
+    .hud-feedback-pill { font-size: 12px; padding: 7px 14px; max-width: 96%; }
+
+    .camera-placeholder { padding: 16px; }
+    .camera-placeholder h3 { font-size: 18px; }
+
+    /* Controls: primary full width, 3 compact buttons below */
+    .controls-panel {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    #btn-toggle-camera {
+        grid-column: 1 / -1;
+        height: 54px;
+        font-size: 15px;
+    }
+    .btn-secondary, .btn-outline {
+        height: 46px;
+        font-size: 12px;
+        gap: 6px;
+    }
+
+    .stats-panel { gap: 8px; }
+    .stat-card { padding: 10px 6px; }
+    .stat-number { font-size: 19px; }
+
+    .history-panel, .guide-panel { padding: 14px; }
+    .auth-card { padding: 22px 18px; }
+}
+
+/* Very small phones */
+@media (max-width: 360px) {
+    .btn-secondary span, .btn-outline span { display: none; }
+    .btn-secondary, .btn-outline { font-size: 16px; }
+}
+
