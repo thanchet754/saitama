@@ -51,6 +51,14 @@ Tab **Chạy · Đạp xe (GPS)**: Chạy bộ, Đi bộ, Đạp xe, Đi xe.
 - **Nền sáng / tối**, tối ưu điện thoại dọc 9:16, giữ màn hình sáng khi tập.
 - **Riêng tư**: AI chạy trên thiết bị; hình ảnh camera không gửi đi đâu. Khi bật "Ghi tên địa điểm", tọa độ được gửi tới BigDataCloud để tra tên.
 
+## 📴 Offline
+
+- `sw.js` (service worker) lưu sẵn giao diện, thư viện, mô hình AI và ô bản đồ đã xem → web/app mở và tập được khi mất mạng (cần mở online ít nhất 1 lần).
+- File của web luôn lấy bản mới khi có mạng (network-first), nên cập nhật vẫn có ngay.
+- Lúc offline: thanh "Đang offline" + số mục đang chờ; mọi dữ liệu (buổi tập, hoạt động GPS, hồ sơ) lưu trong trình duyệt/app.
+- Có mạng lại: tự tải lên Supabase và báo số mục đã tải (`offline.js`). Đăng nhập được nhớ cả khi token hết hạn lúc offline.
+- iOS cần `WKAppBoundDomains` (đã khai báo) để WKWebView cho phép service worker.
+
 ## 📁 Cấu trúc
 
 - `index.html`, `style.css` - giao diện

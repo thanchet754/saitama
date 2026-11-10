@@ -869,6 +869,11 @@ async function initAuth() {
         })
         .catch(() => {});
 
+    // Use the remembered account right away: offline, Supabase retries the token
+    // refresh for up to ~30s before reporting INITIAL_SESSION
+    const remembered = storedUser();
+    if (remembered) onUserChanged(remembered);
+
     // Fires INITIAL_SESSION on load (session is remembered in this browser)
     sb.auth.onAuthStateChange((event, session) => {
         // Defer: Supabase recommends not awaiting other calls inside this callback
@@ -878,9 +883,21 @@ async function initAuth() {
                 showAuth('reset');
                 return;
             }
-            onUserChanged(session ? session.user : null);
+            // Offline with an expired token Supabase can't refresh and reports no
+            // session; keep the remembered user so the app still works offline.
+            // The stored token stays put and is refreshed once the network is back.
+            const user = session ? session.user : (event !== 'SIGNED_OUT' ? storedUser() : null);
+            onUserChanged(user);
         }, 0);
     });
+}
+
+function storedUser() {
+    try {
+        const ref = new URL(SUPABASE_URL).hostname.split('.')[0];
+        const s = JSON.parse(localStorage.getItem(`sb-${ref}-auth-token`) || 'null');
+        return (s && s.user && s.refresh_token) ? s.user : null;
+    } catch (e) { return null; }
 }
 
 // ---------- History storage (per-user local cache) ----------
@@ -990,7 +1007,7 @@ function saveSession() {
     pushEntry(entry);
 }
 
-window.addEventListener('online', syncHistory);
+// (re-sync after reconnecting is handled in offline.js)
 
 function renderHistory() {
     if (!sbUserId) {

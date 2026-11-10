@@ -75,6 +75,12 @@
             <button class="account-logout" onclick="signOut()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
         </div>
 
+        <!-- Shown while there is no internet connection -->
+        <div id="offline-bar" class="offline-bar" role="status" aria-live="polite" hidden>
+            <i class="fa-solid fa-wifi"></i>
+            <span id="offline-text">Đang offline</span>
+        </div>
+
         <!-- Android app: native update needed (rare) -->
         <div id="app-update" class="act-resume app-update" hidden>
             <i class="fa-solid fa-mobile-screen-button"></i>
@@ -548,5 +554,6 @@
     <script src="recorder.js"></script>
     <script src="activity.js"></script>
     <script src="programs.js"></script>
+    <script src="offline.js"></script>
 </body>
 </html>

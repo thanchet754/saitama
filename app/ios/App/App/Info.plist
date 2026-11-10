@@ -61,6 +61,10 @@
 	<string>Cho phép "Luôn luôn" để Saitama tiếp tục ghi quãng đường khi bạn tắt màn hình.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Saitama lưu video buổi tập vào thư viện ảnh khi bạn chọn.</string>
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>saitama-liart.vercel.app</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

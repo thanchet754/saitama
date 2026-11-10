@@ -11,6 +11,9 @@
       "*.supabase.co"
     ]
   },
+  "ios": {
+    "limitsNavigationsToAppBoundDomains": true
+  },
   "android": {
     "useLegacyBridge": true,
     "allowMixedContent": false,

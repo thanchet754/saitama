@@ -229,11 +229,14 @@ async function saveProfile(p) {
     storeLocalProfile(p);
     if (typeof actSettings !== 'undefined') { actSettings.weight = Math.round(p.weight_kg); saveActSettings(); }
     renderProgramPanel();
-    if (!sb || !sbUserId) return;
+    if (!sbUserId) return;
+    setProfileDirty(true);
+    if (!sb) return;
     try {
         const { error } = await sb.from(PROFILE_TABLE).upsert({ user_id: sbUserId, profile: p, updated_at: new Date().toISOString() });
         if (error) throw error;
-    } catch (e) { console.warn('Profile upload failed', e); }
+        setProfileDirty(false);
+    } catch (e) { console.warn('Profile upload failed, will retry when online', e); }
 }
 
 async function loadProfile() {
@@ -246,13 +249,16 @@ async function loadProfile() {
         if (error) throw error;
         if (uid !== sbUserId) return;
         const remote = data && data.profile;
-        if (remote && (!profile || (remote.updatedAt || 0) >= (profile.updatedAt || 0))) {
+        if (profile && isProfileDirty()) {
+            saveProfile(profile); // edited offline: local copy wins
+        } else if (remote && (!profile || (remote.updatedAt || 0) >= (profile.updatedAt || 0))) {
             profile = remote;
             storeLocalProfile(profile);
         } else if (profile && !remote) {
             saveProfile(profile); // push local-only profile
         }
     } catch (e) { console.warn('Profile load failed', e); }
+    if (uid !== sbUserId) return;
     renderProgramPanel();
     if (!profile) openProfileModal(true);
 }
