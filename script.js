@@ -195,6 +195,10 @@ async function getPoseModel() {
 
 window.toggleCamera = async function () {
     if (isStarting) return;
+    if (!sbUserId && !isCameraActive) {
+        showAuth('login');
+        return;
+    }
     if (isCameraActive) {
         stopCamera();
     } else {
@@ -676,7 +680,7 @@ function stopTimer() {
 }
 
 // ==============================================================
-// WORKOUT HISTORY (Supabase cloud + localStorage cache/offline)
+// ACCOUNT (Supabase Auth) & WORKOUT HISTORY (cloud + local cache)
 // ==============================================================
 // The anon key is public by design; data is protected by Row Level Security.
 const SUPABASE_URL = 'https://lhsgdulyyssrcicwhdhs.supabase.co';
@@ -684,9 +688,28 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const SESSIONS_TABLE = 'workout_sessions';
 
 let sb = null;          // Supabase client
-let sbUserId = null;    // set once signed in (anonymous)
+let sbUser = null;      // signed-in user
+let sbUserId = null;
+let authMode = 'login'; // 'login' | 'signup' | 'forgot' | 'reset'
 
 const syncStatusEl = $('sync-status');
+const authOverlayEl = $('auth-overlay');
+const authFormEl = $('auth-form');
+const authTitleEl = $('auth-title');
+const authSubtitleEl = $('auth-subtitle');
+const authEmailEl = $('auth-email');
+const authPasswordEl = $('auth-password');
+const authEmailRow = $('auth-email-row');
+const authPasswordRow = $('auth-password-row');
+const authMsgEl = $('auth-msg');
+const authSubmitEl = $('auth-submit');
+const authLoadingEl = $('auth-loading');
+const authBodyEl = $('auth-body');
+const authGoogleBlock = $('auth-google-block');
+const authSwitchEl = $('auth-switch');
+const authForgotLink = $('auth-forgot-link');
+const accountBarEl = $('account-bar');
+const accountEmailEl = $('account-email');
 
 function setSyncStatus(state, text) {
     syncStatusEl.className = `sync-status ${state}`;
@@ -694,9 +717,198 @@ function setSyncStatus(state, text) {
     syncStatusEl.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${text}</span>`;
 }
 
-function loadHistory() {
+// ---------- Auth UI ----------
+const AUTH_TEXT = {
+    login:  { title: 'Đăng Nhập', sub: 'Đăng nhập để lưu và xem lại lịch sử tập luyện trên mọi thiết bị.', submit: 'ĐĂNG NHẬP', pwAuto: 'current-password' },
+    signup: { title: 'Tạo Tài Khoản', sub: 'Đăng ký miễn phí, dùng ngay không cần xác nhận email.', submit: 'ĐĂNG KÝ', pwAuto: 'new-password' },
+    forgot: { title: 'Quên Mật Khẩu', sub: 'Nhập email, chúng tôi sẽ gửi link đặt lại mật khẩu.', submit: 'GỬI LINK ĐẶT LẠI', pwAuto: 'off' },
+    reset:  { title: 'Đặt Mật Khẩu Mới', sub: 'Nhập mật khẩu mới cho tài khoản của bạn.', submit: 'LƯU MẬT KHẨU', pwAuto: 'new-password' }
+};
+
+function setAuthMessage(text, type = 'error') {
+    authMsgEl.textContent = text || '';
+    authMsgEl.className = `auth-msg ${type}`;
+}
+
+window.setAuthMode = function (mode) {
+    authMode = mode;
+    const t = AUTH_TEXT[mode];
+    authTitleEl.textContent = t.title;
+    authSubtitleEl.textContent = t.sub;
+    authSubmitEl.textContent = t.submit;
+    authPasswordEl.autocomplete = t.pwAuto;
+    authEmailRow.hidden = mode === 'reset';
+    authPasswordRow.hidden = mode === 'forgot';
+    authForgotLink.hidden = mode !== 'login';
+    authGoogleBlock.hidden = !(mode === 'login' || mode === 'signup') || !googleEnabled;
+    authSwitchEl.innerHTML = mode === 'login'
+        ? 'Chưa có tài khoản? <a href="#" onclick="setAuthMode(\'signup\');return false;">Đăng ký</a>'
+        : mode === 'reset' ? ''
+        : 'Đã có tài khoản? <a href="#" onclick="setAuthMode(\'login\');return false;">Đăng nhập</a>';
+    setAuthMessage('');
+};
+
+function showAuth(mode = 'login') {
+    authLoadingEl.hidden = true;
+    authBodyEl.hidden = false;
+    setAuthMode(mode);
+    authOverlayEl.hidden = false;
+    document.body.classList.add('auth-open');
+    setTimeout(() => (mode === 'reset' ? authPasswordEl : authEmailEl).focus(), 50);
+}
+
+function hideAuth() {
+    authOverlayEl.hidden = true;
+    document.body.classList.remove('auth-open');
+}
+
+function showAuthFatal(text) {
+    authOverlayEl.hidden = false;
+    authBodyEl.hidden = true;
+    authLoadingEl.hidden = false;
+    authLoadingEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><p>${text}</p>
+        <button class="btn btn-primary" onclick="location.reload()">Tải lại trang</button>`;
+}
+
+function translateAuthError(err) {
+    const msg = (err && (err.message || err.error_description)) || '';
+    const code = err && err.code;
+    if (code === 'invalid_credentials' || /invalid login credentials/i.test(msg)) return 'Sai email hoặc mật khẩu.';
+    if (code === 'user_already_exists' || /already registered/i.test(msg)) return 'Email này đã có tài khoản. Hãy đăng nhập.';
+    if (code === 'weak_password' || /password should be/i.test(msg)) return 'Mật khẩu quá yếu (tối thiểu 6 ký tự).';
+    if (code === 'email_address_invalid' || /invalid.*email|email.*invalid/i.test(msg)) return 'Email không hợp lệ.';
+    if (code === 'over_email_send_rate_limit' || /rate limit/i.test(msg)) return 'Gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.';
+    if (code === 'same_password') return 'Mật khẩu mới phải khác mật khẩu cũ.';
+    if (/fetch|network/i.test(msg)) return 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.';
+    return msg || 'Đã có lỗi xảy ra. Vui lòng thử lại.';
+}
+
+async function handleAuthSubmit(e) {
+    e.preventDefault();
+    if (!sb) return;
+    const email = authEmailEl.value.trim();
+    const password = authPasswordEl.value;
+    setAuthMessage('');
+    authSubmitEl.disabled = true;
+    const label = authSubmitEl.textContent;
+    authSubmitEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
     try {
-        const data = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        if (authMode === 'login') {
+            const { error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+        } else if (authMode === 'signup') {
+            const { data, error } = await sb.auth.signUp({ email, password });
+            if (error) throw error;
+            // An existing (already confirmed) email returns a user with no identities
+            if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+                throw { code: 'user_already_exists' };
+            }
+            if (!data.session) {
+                setAuthMessage('Đã gửi email xác nhận. Hãy mở email để kích hoạt tài khoản.', 'success');
+            }
+        } else if (authMode === 'forgot') {
+            const { error } = await sb.auth.resetPasswordForEmail(email, {
+                redirectTo: location.origin + location.pathname
+            });
+            if (error) throw error;
+            setAuthMessage('Đã gửi link đặt lại mật khẩu. Hãy kiểm tra hộp thư (cả mục Spam).', 'success');
+        } else if (authMode === 'reset') {
+            const { error } = await sb.auth.updateUser({ password });
+            if (error) throw error;
+            authPasswordEl.value = '';
+            hideAuth();
+        }
+    } catch (err) {
+        setAuthMessage(translateAuthError(err));
+    } finally {
+        authSubmitEl.disabled = false;
+        authSubmitEl.textContent = label;
+    }
+}
+
+let googleEnabled = false;
+
+window.signInWithGoogle = async function () {
+    if (!sb) return;
+    const { error } = await sb.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: location.origin + location.pathname }
+    });
+    if (error) setAuthMessage(translateAuthError(error));
+};
+
+window.signOut = async function () {
+    if (isCameraActive) stopCamera(); // also saves the current session
+    else saveSession();
+    if (sb) await sb.auth.signOut();
+};
+
+function onUserChanged(user) {
+    const prevId = sbUserId;
+    sbUser = user;
+    sbUserId = user ? user.id : null;
+
+    if (user) {
+        accountEmailEl.textContent = user.email || 'Tài khoản';
+        accountBarEl.hidden = false;
+        if (authMode !== 'reset') hideAuth();
+        if (prevId !== sbUserId) {
+            renderHistory();
+            syncHistory();
+        }
+    } else {
+        if (isCameraActive) stopCamera();
+        accountBarEl.hidden = true;
+        repCount = 0; // don't carry an unsaved count into the next account
+        resetCounter();
+        renderHistory();
+        setSyncStatus('local', 'Chưa đăng nhập');
+        showAuth('login');
+    }
+}
+
+async function initAuth() {
+    if (!window.supabase || !window.supabase.createClient) {
+        showAuthFatal('Không tải được hệ thống đăng nhập. Kiểm tra kết nối internet.');
+        return;
+    }
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+
+    authFormEl.addEventListener('submit', handleAuthSubmit);
+
+    // Show the Google button only when the provider is enabled in Supabase
+    fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_ANON_KEY } })
+        .then(r => r.json())
+        .then(s => {
+            googleEnabled = !!(s.external && s.external.google);
+            if (!authOverlayEl.hidden && !authBodyEl.hidden) setAuthMode(authMode);
+        })
+        .catch(() => {});
+
+    // Fires INITIAL_SESSION on load (session is remembered in this browser)
+    sb.auth.onAuthStateChange((event, session) => {
+        // Defer: Supabase recommends not awaiting other calls inside this callback
+        setTimeout(() => {
+            if (event === 'PASSWORD_RECOVERY') {
+                onUserChanged(session ? session.user : null);
+                showAuth('reset');
+                return;
+            }
+            onUserChanged(session ? session.user : null);
+        }, 0);
+    });
+}
+
+// ---------- History storage (per-user local cache) ----------
+const historyKey = () => `${HISTORY_KEY}.${sbUserId}`;
+
+function loadHistory() {
+    if (!sbUserId) return [];
+    try {
+        const data = JSON.parse(localStorage.getItem(historyKey()) || '[]');
         return Array.isArray(data) ? data : [];
     } catch (e) {
         return [];
@@ -704,9 +916,10 @@ function loadHistory() {
 }
 
 function storeHistory(history) {
+    if (!sbUserId) return;
     history.sort((a, b) => new Date(b.date) - new Date(a.date));
     try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, HISTORY_LIMIT)));
+        localStorage.setItem(historyKey(), JSON.stringify(history.slice(0, HISTORY_LIMIT)));
     } catch (e) {
         console.warn('Cannot save history', e);
     }
@@ -732,34 +945,10 @@ const fromRow = (r) => ({
     synced: true
 });
 
-async function initCloud() {
-    if (!window.supabase || !window.supabase.createClient) {
-        setSyncStatus('local', 'Chỉ lưu trên máy');
-        return;
-    }
-    try {
-        sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: { persistSession: true, autoRefreshToken: true }
-        });
-        let { data: { session } } = await sb.auth.getSession();
-        if (!session) {
-            const { data, error } = await sb.auth.signInAnonymously();
-            if (error) throw error;
-            session = data.session;
-        }
-        sbUserId = session.user.id;
-        await syncHistory();
-    } catch (e) {
-        console.warn('Supabase unavailable, using local storage only', e);
-        sb = null;
-        sbUserId = null;
-        setSyncStatus('local', 'Chỉ lưu trên máy');
-    }
-}
-
-// Push unsynced local entries, then pull latest from cloud
+// Push unsynced local entries, then load the latest from the cloud
 async function syncHistory() {
     if (!sb || !sbUserId) return;
+    const userAtStart = sbUserId;
     setSyncStatus('syncing', 'Đang đồng bộ...');
     try {
         const pending = loadHistory().filter(h => !h.synced);
@@ -773,6 +962,7 @@ async function syncHistory() {
             .order('performed_at', { ascending: false })
             .limit(HISTORY_LIMIT);
         if (error) throw error;
+        if (userAtStart !== sbUserId) return; // user switched meanwhile
 
         const stillPending = loadHistory().filter(h => !h.synced && !data.some(r => Number(r.client_id) === h.id));
         storeHistory([...stillPending, ...data.map(fromRow)]);
@@ -786,11 +976,14 @@ async function syncHistory() {
 
 async function pushEntry(entry) {
     if (!sb || !sbUserId) return;
+    const uid = sbUserId;
     try {
         const { error } = await sb.from(SESSIONS_TABLE)
             .upsert(toRow(entry), { onConflict: 'user_id,client_id' });
         if (error) throw error;
+        if (uid !== sbUserId) return;
         storeHistory(loadHistory().map(h => (h.id === entry.id ? { ...h, synced: true } : h)));
+        renderHistory();
         setSyncStatus('cloud', 'Đã lưu đám mây');
     } catch (e) {
         console.warn('Upload failed, will retry later', e);
@@ -799,7 +992,7 @@ async function pushEntry(entry) {
 }
 
 function saveSession() {
-    if (repCount <= 0) return;
+    if (repCount <= 0 || !sbUserId) return;
     const entry = {
         id: sessionId,
         exercise: currentExercise,
@@ -819,6 +1012,10 @@ function saveSession() {
 window.addEventListener('online', syncHistory);
 
 function renderHistory() {
+    if (!sbUserId) {
+        historyListEl.innerHTML = '<li class="history-empty">Đăng nhập để xem lịch sử tập luyện.</li>';
+        return;
+    }
     const history = loadHistory();
     if (!history.length) {
         historyListEl.innerHTML = '<li class="history-empty">Chưa có buổi tập nào. Bắt đầu ngay nhé!</li>';
@@ -839,10 +1036,10 @@ function renderHistory() {
 }
 
 window.clearHistory = async function () {
-    if (!loadHistory().length) return;
-    try { localStorage.removeItem(HISTORY_KEY); } catch (e) {}
+    if (!sbUserId || !loadHistory().length) return;
+    try { localStorage.removeItem(historyKey()); } catch (e) {}
     renderHistory();
-    if (sb && sbUserId) {
+    if (sb) {
         const { error } = await sb.from(SESSIONS_TABLE).delete().eq('user_id', sbUserId);
         if (error) console.warn('Cloud delete failed', error);
     }
@@ -855,5 +1052,5 @@ window.addEventListener('pagehide', saveSession);
 document.addEventListener('DOMContentLoaded', () => {
     selectExercise('SQUAT');
     renderHistory();
-    initCloud();
+    initAuth();
 });
