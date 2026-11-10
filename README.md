@@ -59,6 +59,15 @@ python -m http.server 8765
 ```
 Mở `http://localhost:8765` (cổng này đã có trong danh sách redirect của Supabase Auth).
 
+## 📱 App điện thoại
+
+App là "vỏ" native (Capacitor, thư mục `app/`) tải trực tiếp web Vercel → **sửa web là app tự cập nhật, không cần cài lại**. Vỏ native có sẵn: GPS chạy nền, giữ màn hình, giọng đọc, lưu/chia sẻ file.
+
+- **Android**: https://github.com/thanchet754/saitama/releases/latest/download/saitama.apk (build bằng GitHub Actions, khóa ký nằm ngoài repo ở `..\saitama-android-key`).
+- **iOS (miễn phí)**: https://github.com/thanchet754/saitama/releases/download/ios-latest/saitama-ios.ipa — file chưa ký, cài bằng [Sideloadly](https://sideloadly.io) với Apple ID thường. Phải bấm *Refresh* trong Sideloadly mỗi 7 ngày (dữ liệu giữ nguyên).
+
+Chỉ khi sửa trong `app/` thì GitHub mới build lại APK / IPA.
+
 ## 🚀 Deploy
 
 Push lên nhánh `main` của GitHub → Vercel tự deploy. Trên máy có sẵn `deploy.bat` (pull + commit + push).
