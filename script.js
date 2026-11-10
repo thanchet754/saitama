@@ -50,6 +50,7 @@ function applyTheme(theme) {
     document.querySelectorAll('.theme-icon').forEach(i => {
         i.className = `fa-solid ${theme === 'light' ? 'fa-sun' : 'fa-moon'} theme-icon`;
     });
+    document.dispatchEvent(new CustomEvent('themechange', { detail: theme }));
 }
 
 window.toggleTheme = function () {
@@ -825,6 +826,7 @@ function onUserChanged(user) {
         if (prevId !== sbUserId) {
             renderHistory();
             syncHistory();
+            if (window.onActivitiesUserChanged) onActivitiesUserChanged();
         }
     } else {
         if (isCameraActive) stopCamera();
@@ -833,6 +835,7 @@ function onUserChanged(user) {
         resetCounter();
         renderHistory();
         setSyncStatus('local', 'Chưa đăng nhập');
+        if (window.onActivitiesUserChanged) onActivitiesUserChanged();
         showAuth('login');
     }
 }

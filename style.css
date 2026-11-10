@@ -1264,6 +1264,259 @@ body.modal-open { overflow: hidden; }
 .toast.error { border-left: 4px solid #FF3B30; }
 .toast.info { border-left: 4px solid var(--neon-cyan); }
 
+/* ---------- Mode tabs ---------- */
+.mode-pane { display: flex; flex-direction: column; gap: inherit; }
+.mode-pane[hidden] { display: none; }
+
+.mode-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    background: var(--card-dark);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 4px;
+}
+.mode-tab {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    padding: 11px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+.mode-tab.active {
+    background: var(--primary-gradient);
+    color: #FFF;
+    box-shadow: 0 4px 14px rgba(255, 94, 58, 0.35);
+}
+
+/* ---------- Resume banner ---------- */
+.act-resume {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 149, 0, 0.12);
+    border: 1px solid rgba(255, 149, 0, 0.45);
+    font-size: 13px;
+}
+.act-resume[hidden] { display: none; }
+.act-resume > i { color: var(--neon-orange); }
+.act-resume > span { flex: 1; min-width: 160px; }
+.act-resume-actions { display: flex; gap: 8px; }
+.act-resume-actions .btn { height: 36px; font-size: 12px; padding: 0 14px; }
+
+/* ---------- Activity type picker ---------- */
+.act-type-picker {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+.act-type-btn {
+    background: var(--card-dark);
+    border: 2px solid var(--card-border);
+    border-radius: var(--radius-md);
+    color: var(--text-white);
+    padding: 10px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.act-type-btn i { font-size: 20px; color: var(--neon-cyan); }
+.act-type-btn.active {
+    border-color: var(--primary);
+    background: linear-gradient(135deg, rgba(255, 94, 58, 0.16), rgba(255, 42, 84, 0.08)), var(--card-dark);
+}
+.act-type-btn.active i { color: var(--primary); }
+
+/* ---------- Map ---------- */
+.act-map-wrap {
+    position: relative;
+    isolation: isolate; /* keep Leaflet & badge z-indexes inside, below modals */
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.act-map {
+    height: 360px;
+    background: #1A1C28;
+    z-index: 0;
+}
+.act-gps-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 500;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 6px 10px;
+    border-radius: 20px;
+    background: rgba(13, 14, 18, 0.82);
+    color: #FFF;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.act-gps-badge.good i { color: #00E676; }
+.act-gps-badge.ok i { color: #FFC400; }
+.act-gps-badge.bad i { color: #FF3B30; }
+.act-gps-badge.wait i { color: #9E9EA7; animation: pulseDot 1.2s infinite; }
+.act-recenter {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 500;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    background: #FFF;
+    color: #0D0E12;
+    font-size: 17px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+.act-recenter.show { opacity: 1; pointer-events: auto; }
+
+/* ---------- Dashboard ---------- */
+.act-dash {
+    background: var(--card-dark);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.act-state {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.act-state.live { color: var(--neon-green); }
+.act-state.live::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--neon-green);
+    margin-right: 6px;
+    animation: pulseDot 1.2s infinite;
+}
+.act-state.paused { color: var(--neon-orange); }
+.act-main { display: flex; align-items: baseline; gap: 6px; }
+.act-big {
+    font-family: 'Outfit', sans-serif;
+    font-size: 64px;
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+.act-big-unit { font-size: 18px; font-weight: 800; color: var(--text-muted); }
+.act-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+}
+.act-grid > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+}
+.act-label { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+.act-grid strong {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.act-grid small { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+
+/* ---------- Controls ---------- */
+.act-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.act-controls .btn { height: 58px; font-size: 16px; }
+.act-controls .btn[hidden] { display: none; }
+.act-start { grid-column: 1 / -1; }
+.act-finish { background: linear-gradient(135deg, #00C853, #00A152); box-shadow: 0 6px 20px rgba(0, 200, 83, 0.3); }
+
+/* ---------- Splits ---------- */
+.act-splits-panel {
+    background: var(--card-dark);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+}
+.act-splits-panel[hidden] { display: none; }
+.act-splits-panel h3 { font-size: 14px; font-weight: 800; color: var(--neon-cyan); margin-bottom: 10px; display: flex; gap: 8px; align-items: center; }
+.act-splits { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.act-splits li { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px; font-size: 12px; }
+.sp-km { font-weight: 800; color: var(--text-muted); text-align: right; }
+.sp-bar { height: 8px; background: var(--surface-soft); border-radius: 4px; overflow: hidden; }
+.sp-bar span { display: block; height: 100%; background: var(--primary-gradient); border-radius: 4px; }
+.sp-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.act-item { cursor: pointer; transition: var(--transition); }
+.act-item:hover { border-color: var(--neon-cyan); }
+
+/* ---------- Activity modal ---------- */
+.act-modal-card { max-width: 520px; }
+.act-modal-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.act-modal-map { height: 260px; border-radius: var(--radius-sm); overflow: hidden; z-index: 0; isolation: isolate; background: #1A1C28; flex-shrink: 0; }
+.act-modal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.act-modal-stats > div {
+    background: var(--surface-soft);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.act-modal-stats span { font-size: 10px; color: var(--text-muted); font-weight: 600; }
+.act-modal-stats strong { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 900; }
+.act-modal-sub { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
+#act-modal-splits-wrap[hidden] { display: none; }
+.act-modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.act-modal-actions .btn[hidden] { display: none; }
+.act-modal-actions #act-modal-save { grid-column: 1 / -1; }
+.act-delete:hover { color: #FF3B30 !important; border-color: #FF3B30 !important; }
+
+/* Leaflet tweaks */
+.leaflet-container { font-family: 'Inter', sans-serif; }
+[data-theme="dark"] .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.6); }
+[data-theme="dark"] .leaflet-container { background: #1A1C28; }
+[data-theme="dark"] .leaflet-control-attribution { background: rgba(13, 14, 18, 0.7) !important; color: #9E9EA7; }
+[data-theme="dark"] .leaflet-control-attribution a { color: #CFCFD6; }
+
 /* Footer */
 .app-footer {
     text-align: center;
@@ -1365,6 +1618,16 @@ body.modal-open { overflow: hidden; }
         padding: 0 4px;
     }
     .controls-panel .btn-secondary i, .controls-panel .btn-outline i { font-size: 16px; }
+
+    .mode-tab { font-size: 13px; padding: 10px 4px; gap: 6px; }
+    .act-map { height: 38dvh; min-height: 240px; }
+    .act-big { font-size: 56px; }
+    .act-grid { grid-template-columns: repeat(3, 1fr); row-gap: 10px; }
+    .act-grid strong { font-size: 17px; }
+    .act-type-btn { padding: 8px 2px; font-size: 11px; }
+    .act-type-btn i { font-size: 18px; }
+    .act-modal-stats { grid-template-columns: repeat(2, 1fr); }
+    .act-modal-map { height: 32dvh; }
 
     .rec-settings summary { padding: 12px 14px; }
     .rec-settings-body { padding: 0 14px 14px; }

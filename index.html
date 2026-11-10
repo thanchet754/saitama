@@ -36,6 +36,10 @@
     <!-- Supabase (cloud workout history) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 
+    <!-- Leaflet map (GPS activities) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
     <!-- App Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
@@ -48,7 +52,7 @@
                 <i class="fa-solid fa-bolt-lightning logo-icon"></i>
                 <div class="logo-text">
                     <h1>AI POSE TRACKER</h1>
-                    <span>Đếm rep 9 bài tập bằng khung xương AI</span>
+                    <span>Đếm rep bằng AI · Chạy, đạp xe bằng GPS</span>
                 </div>
             </div>
             <div class="header-actions">
@@ -67,6 +71,100 @@
             <span class="account-user"><i class="fa-solid fa-circle-user"></i> <span id="account-email"></span></span>
             <button class="account-logout" onclick="signOut()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
         </div>
+
+        <!-- Unfinished GPS activity banner -->
+        <div id="act-resume" class="act-resume" hidden>
+            <i class="fa-solid fa-route"></i>
+            <span id="act-resume-text"></span>
+            <div class="act-resume-actions">
+                <button class="btn btn-primary" onclick="resumeUnfinished()">Khôi phục</button>
+                <button class="btn btn-outline" onclick="discardUnfinished()">Bỏ</button>
+            </div>
+        </div>
+
+        <!-- Mode tabs -->
+        <nav class="mode-tabs" role="tablist">
+            <button class="mode-tab active" data-mode="camera" role="tab" aria-selected="true" onclick="setMode('camera')">
+                <i class="fa-solid fa-person-rays"></i> <span>Tập với Camera</span>
+            </button>
+            <button class="mode-tab" data-mode="gps" role="tab" aria-selected="false" onclick="setMode('gps')">
+                <i class="fa-solid fa-route"></i> <span>Chạy · Đạp xe (GPS)</span>
+            </button>
+        </nav>
+
+        <!-- ===================== GPS ACTIVITY MODE ===================== -->
+        <div id="mode-gps" class="mode-pane" hidden>
+            <section id="act-type-picker" class="act-type-picker" aria-label="Loại hoạt động"></section>
+
+            <section class="act-map-wrap">
+                <div id="act-map" class="act-map"></div>
+                <div id="act-gps-badge" class="act-gps-badge wait"><i class="fa-solid fa-satellite-dish"></i> GPS chưa bật</div>
+                <button id="act-recenter" class="act-recenter" onclick="recenterMap()" aria-label="Về vị trí của tôi" title="Về vị trí của tôi">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                </button>
+            </section>
+
+            <section class="act-dash">
+                <div id="act-state" class="act-state">Sẵn sàng</div>
+                <div class="act-main">
+                    <span id="act-distance" class="act-big">0.00</span>
+                    <span class="act-big-unit">km</span>
+                </div>
+                <div class="act-grid">
+                    <div><span class="act-label">Thời gian</span><strong id="act-time">00:00</strong></div>
+                    <div><span id="act-speed-label" class="act-label">Pace hiện tại</span><strong><span id="act-speed">--:--</span> <small id="act-speed-unit">/km</small></strong></div>
+                    <div><span id="act-avg-label" class="act-label">Pace TB</span><strong><span id="act-avg">--:--</span> <small id="act-avg-unit">/km</small></strong></div>
+                    <div><span class="act-label">Độ cao leo</span><strong><span id="act-elev">0</span> <small>m</small></strong></div>
+                    <div><span class="act-label">Calo</span><strong><span id="act-cal">0</span> <small>kcal</small></strong></div>
+                </div>
+            </section>
+
+            <section class="act-controls">
+                <button id="act-start" class="btn btn-primary act-start" onclick="startActivity()">
+                    <i class="fa-solid fa-play"></i> <span>BẮT ĐẦU</span>
+                </button>
+                <button id="act-pause" class="btn btn-secondary" onclick="togglePauseActivity()" hidden>
+                    <i class="fa-solid fa-pause"></i> <span>Tạm dừng</span>
+                </button>
+                <button id="act-finish" class="btn btn-primary act-finish" onclick="finishActivity()" hidden>
+                    <i class="fa-solid fa-flag-checkered"></i> <span>Kết thúc</span>
+                </button>
+            </section>
+
+            <section id="act-splits-panel" class="act-splits-panel" hidden>
+                <h3><i class="fa-solid fa-list-ol"></i> Split từng km</h3>
+                <ul id="act-splits" class="act-splits"></ul>
+            </section>
+
+            <details class="rec-settings">
+                <summary><i class="fa-solid fa-sliders"></i> Cài đặt hoạt động <i class="fa-solid fa-chevron-down rec-chevron"></i></summary>
+                <div class="rec-settings-body">
+                    <label class="rec-field">
+                        <span>Cân nặng (kg) - để tính calo</span>
+                        <input id="act-weight" type="number" min="20" max="250" step="1" inputmode="numeric">
+                    </label>
+                    <label class="rec-check">
+                        <input id="act-autopause" type="checkbox" checked>
+                        <span>Tự tạm dừng khi đứng yên (không tính thời gian chờ đèn đỏ, nghỉ)</span>
+                    </label>
+                    <label class="rec-check">
+                        <input id="act-voicekm" type="checkbox" checked>
+                        <span>Giọng đọc báo mỗi km (pace / tốc độ)</span>
+                    </label>
+                    <p class="rec-hint">Giữ màn hình mở trong lúc ghi: trình duyệt có thể ngừng nhận GPS khi tắt màn hình hoặc chuyển sang ứng dụng khác.</p>
+                </div>
+            </details>
+
+            <section class="history-panel">
+                <div class="history-head">
+                    <h3><i class="fa-solid fa-route"></i> Hoạt Động Gần Đây</h3>
+                </div>
+                <ul id="act-list" class="history-list"></ul>
+            </section>
+        </div>
+
+        <!-- ===================== CAMERA WORKOUT MODE ===================== -->
+        <div id="mode-camera" class="mode-pane">
 
         <!-- Exercise Selector (rendered from exercises.js) -->
         <section id="exercise-picker" class="exercise-picker" aria-label="Chọn bài tập"></section>
@@ -221,6 +319,8 @@
             <ul id="guide-list"></ul>
         </section>
 
+        </div><!-- /mode-camera -->
+
         <footer class="app-footer">
             Mọi xử lý AI chạy ngay trên thiết bị của bạn. Hình ảnh camera và video quay lại không được gửi đi đâu.
         </footer>
@@ -238,6 +338,31 @@
             <div class="rec-actions">
                 <a id="rec-download" class="btn btn-primary" download><i class="fa-solid fa-download"></i> <span>Tải video</span></a>
                 <button id="rec-share" class="btn btn-secondary" onclick="shareRecording()" hidden><i class="fa-solid fa-share-nodes"></i> <span>Chia sẻ</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GPS activity summary / detail -->
+    <div id="act-modal" class="rec-modal" role="dialog" aria-modal="true" aria-labelledby="act-modal-title" hidden>
+        <div class="rec-modal-card act-modal-card">
+            <div class="rec-modal-head">
+                <div>
+                    <h3 id="act-modal-title"></h3>
+                    <p id="act-modal-date" class="act-modal-date"></p>
+                </div>
+                <button id="act-modal-close" class="rec-close" onclick="closeActModal()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="act-modal-map" class="act-modal-map"></div>
+            <div id="act-modal-stats" class="act-modal-stats"></div>
+            <div id="act-modal-splits-wrap">
+                <h4 class="act-modal-sub">Split từng km</h4>
+                <ul id="act-modal-splits" class="act-splits"></ul>
+            </div>
+            <div class="act-modal-actions">
+                <button id="act-modal-save" class="btn btn-primary" onclick="saveFinishedActivity()"><i class="fa-solid fa-floppy-disk"></i> <span>Lưu hoạt động</span></button>
+                <button id="act-modal-discard" class="btn btn-outline" onclick="discardFinishedActivity()"><i class="fa-solid fa-trash-can"></i> <span>Bỏ</span></button>
+                <button class="btn btn-secondary" onclick="exportGpx()"><i class="fa-solid fa-file-export"></i> <span>Tải GPX</span></button>
+                <button id="act-modal-delete" class="btn btn-outline act-delete" onclick="deleteActivity()"><i class="fa-solid fa-trash-can"></i> <span>Xóa</span></button>
             </div>
         </div>
     </div>
@@ -296,5 +421,6 @@
     <script src="exercises.js"></script>
     <script src="script.js"></script>
     <script src="recorder.js"></script>
+    <script src="activity.js"></script>
 </body>
 </html>

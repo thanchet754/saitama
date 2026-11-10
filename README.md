@@ -22,6 +22,17 @@ Bản chạy thật: https://saitama-liart.vercel.app
 
 Bài tay (Curl, Đẩy vai, Nâng tạ ngang) cho chọn **Cả 2 tay / Tay phải / Tay trái**. Thêm bài mới: khai báo trong `exercises.js` (ngưỡng góc, hướng `up`/`down`, lời nhắc).
 
+## 🏃 Hoạt động GPS (giống Strava)
+
+Tab **Chạy · Đạp xe (GPS)**: Chạy bộ, Đi bộ, Đạp xe, Đi xe.
+
+- Bản đồ trực tiếp (Leaflet + OpenStreetMap) vẽ tuyến đường, nền tối/sáng theo theme.
+- Quãng đường, thời gian di chuyển, pace (chạy/đi bộ) hoặc tốc độ (đạp xe/đi xe), độ cao leo, calo (theo cân nặng), split từng km.
+- Lọc nhiễu GPS (bỏ điểm sai số lớn, điểm nhảy bất thường, rung tại chỗ), tự tạm dừng khi đứng yên, giọng đọc báo mỗi km.
+- Lỡ tải lại trang / tắt trình duyệt: hoạt động đang ghi được lưu tạm và có nút **Khôi phục**.
+- Kết thúc → xem tổng kết + bản đồ → **Lưu** lên Supabase (bảng `activities`) hoặc **Bỏ**. Xem lại, xóa, **xuất file GPX** (nhập được vào Strava, Garmin...).
+- Lưu ý: trình duyệt có thể ngừng GPS khi tắt màn hình — app giữ màn hình sáng trong lúc ghi.
+
 ## ✨ Tính năng
 
 - **Đăng nhập** email + mật khẩu (sẵn sàng cho Google), trình duyệt nhớ đăng nhập.
@@ -37,7 +48,9 @@ Bài tay (Curl, Đẩy vai, Nâng tạ ngang) cho chọn **Cả 2 tay / Tay ph�
 - `exercises.js` - thư viện bài tập & logic đếm
 - `script.js` - camera, MediaPipe, theme, đăng nhập, lịch sử
 - `recorder.js` - quay video + GPS + tên thiết bị
+- `activity.js` - hoạt động GPS (chạy, đi bộ, đạp xe, đi xe)
 - `supabase/schema.sql` - bảng `workout_sessions` + RLS
+- `supabase/activities.sql` - bảng `activities` + RLS
 
 ## 💻 Chạy trên máy
 
