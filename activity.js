@@ -1,4 +1,4 @@
-// ==============================================================
+﻿// ==============================================================
 // GPS ACTIVITIES (Strava-style): run, walk, ride, drive
 // Live map + distance, moving time, pace/speed, elevation, splits
 // ==============================================================
@@ -8,13 +8,13 @@ const ACT_SETTINGS_KEY = 'aiPoseFitness.actSettings';
 const ACT_LIST_LIMIT = 20;
 
 const ACT_TYPES = {
-    RUN:   { name: 'Chạy bộ', icon: 'fa-person-running', pace: true,  maxSpeed: 12, moveSpeed: 0.8, spacing: 5,  maxAcc: 30,
+    RUN:   { name: 'Chạy bộ', icon: 'fa-person-running', pace: true,  maxSpeed: 12, moveSpeed: 0.8, spacing: 5,  maxAcc: 50,
              met: (kmh) => Math.max(6, kmh) },
-    WALK:  { name: 'Đi bộ',   icon: 'fa-person-walking', pace: true,  maxSpeed: 4.5, moveSpeed: 0.4, spacing: 5,  maxAcc: 30,
+    WALK:  { name: 'Đi bộ',   icon: 'fa-person-walking', pace: true,  maxSpeed: 4.5, moveSpeed: 0.4, spacing: 5,  maxAcc: 50,
              met: (kmh) => (kmh < 4 ? 2.8 : kmh < 5.5 ? 3.5 : 4.3) },
-    RIDE:  { name: 'Đạp xe',  icon: 'fa-person-biking',  pace: false, maxSpeed: 25, moveSpeed: 1.2, spacing: 15, maxAcc: 40,
+    RIDE:  { name: 'Đạp xe',  icon: 'fa-person-biking',  pace: false, maxSpeed: 25, moveSpeed: 1.2, spacing: 15, maxAcc: 60,
              met: (kmh) => (kmh < 16 ? 4 : kmh < 19 ? 6.8 : kmh < 22 ? 8 : 10) },
-    DRIVE: { name: 'Đi xe',   icon: 'fa-motorcycle',     pace: false, maxSpeed: 70, moveSpeed: 2,   spacing: 40, maxAcc: 50,
+    DRIVE: { name: 'Đi xe',   icon: 'fa-motorcycle',     pace: false, maxSpeed: 70, moveSpeed: 2,   spacing: 40, maxAcc: 80,
              met: () => 0, noCalories: true }
 };
 const ACT_ORDER = ['RUN', 'WALK', 'RIDE', 'DRIVE'];
@@ -185,7 +185,6 @@ async function startNativeWatch(background) {
             if (err) {
                 if (err.code === 'NOT_AUTHORIZED') {
                     setGpsBadge('Chưa cấp quyền vị trí', 'bad');
-                    showToast('Hãy cho phép Vị trí cho Saitama trong Cài đặt.', 'error');
                     setTimeout(() => NativeApp.BackgroundGeolocation.openSettings(), 1500);
                 } else {
                     setGpsBadge('Mất tín hiệu GPS', 'bad');
@@ -236,7 +235,6 @@ function stopGpsWatch() {
 function onGpsError(err) {
     if (err.code === 1) {
         setGpsBadge('Chưa cấp quyền vị trí', 'bad');
-        showToast('Hãy cho phép truy cập Vị trí trong trình duyệt để ghi hoạt động.', 'error');
     } else {
         setGpsBadge('Mất tín hiệu GPS', 'bad');
     }
@@ -341,7 +339,7 @@ function newActivity(type) {
 
 window.startActivity = function () {
     if (!sbUserId) { showAuth('login'); return; }
-    if (!navigator.geolocation) { showToast('Thiết bị không hỗ trợ GPS.', 'error'); return; }
+    if (!navigator.geolocation) { setGpsBadge('Thiết bị không hỗ trợ GPS', 'bad'); return; }
     act = newActivity(actSettings.type);
     followMe = true;
     if (actRouteLine) actRouteLine.setLatLngs([]);
@@ -353,7 +351,6 @@ window.startActivity = function () {
     playBeep(880, 0.15);
     updateActControls();
     persistActive();
-    showToast(`Bắt đầu ${ACT_TYPES[act.type].name}. Giữ màn hình mở để GPS ghi liên tục.`, 'info');
 };
 
 window.togglePauseActivity = function () {
@@ -373,15 +370,18 @@ window.togglePauseActivity = function () {
     persistActive();
 };
 
-window.finishActivity = function () {
+// Finish = save straight away (local + cloud), then show the result
+window.finishActivity = async function () {
     if (!act) return;
     if (act.status === 'running') {
         act.status = 'paused';
         act.pausedAt = Date.now();
     }
-    updateActControls();
-    persistActive();
-    openActivityModal(snapshotActivity(act), 'finish');
+    const a = snapshotActivity(act);
+    endActivity();
+    playBeep(660, 0.15);
+    openActivityModal(a, 'detail');
+    await saveActivity(a);
 };
 
 function snapshotActivity(a) {
@@ -451,7 +451,7 @@ function renderActTypePicker() {
 }
 
 window.selectActType = function (type) {
-    if (act) { showToast('Kết thúc hoạt động hiện tại trước khi đổi loại.', 'warn'); return; }
+    if (act) return; // type is fixed while recording
     actSettings.type = type;
     saveActSettings();
     document.querySelectorAll('.act-type-btn').forEach(b => {
@@ -562,7 +562,6 @@ window.resumeUnfinished = function () {
     renderSplits();
     startTicker();
     updateActControls();
-    showToast('Đã khôi phục. Bấm "Tiếp tục" để ghi tiếp.', 'info');
 };
 
 window.discardUnfinished = function () {
@@ -614,10 +613,8 @@ async function saveActivity(summary) {
         if (error) throw error;
         storeActCache(loadActCache().map(a => (a.clientId === summary.clientId ? { ...a, synced: true } : a)));
         renderActList();
-        showToast('Đã lưu hoạt động lên đám mây.', 'info');
     } catch (e) {
-        console.warn('Activity upload failed', e);
-        showToast('Đã lưu trên máy, sẽ đồng bộ khi có mạng.', 'warn');
+        console.warn('Activity upload failed, will retry on next sync', e);
     }
 }
 
@@ -749,10 +746,6 @@ window.saveFinishedActivity = async function () {
     const a = detailActivity;
     closeActModal();
     endActivity();
-    if (a.distance < 10 && a.movingS < 10) {
-        showToast('Hoạt động quá ngắn, không lưu.', 'warn');
-        return;
-    }
     await saveActivity(a);
 };
 
