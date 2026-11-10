@@ -1,0 +1,19 @@
+{
+  "appId": "com.thanchet754.saitama",
+  "appName": "Saitama - AI Pose Tracker",
+  "webDir": "www",
+  "server": {
+    "url": "https://saitama-liart.vercel.app",
+    "cleartext": false,
+    "errorPath": "offline.html",
+    "allowNavigation": [
+      "saitama-liart.vercel.app",
+      "*.supabase.co"
+    ]
+  },
+  "android": {
+    "useLegacyBridge": true,
+    "allowMixedContent": false,
+    "backgroundColor": "#0D0E12"
+  }
+}

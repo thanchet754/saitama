@@ -36,6 +36,9 @@
     <!-- Supabase (cloud workout history) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 
+    <!-- Capacitor core: lets the page call native plugins inside the Android app (no-op in browsers) -->
+    <script src="https://cdn.jsdelivr.net/npm/@capacitor/core@8.6.0/dist/capacitor.js"></script>
+
     <!-- Leaflet map (GPS activities) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -70,6 +73,15 @@
         <div id="account-bar" class="account-bar" hidden>
             <span class="account-user"><i class="fa-solid fa-circle-user"></i> <span id="account-email"></span></span>
             <button class="account-logout" onclick="signOut()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+        </div>
+
+        <!-- Android app: native update needed (rare) -->
+        <div id="app-update" class="act-resume app-update" hidden>
+            <i class="fa-solid fa-mobile-screen-button"></i>
+            <span id="app-update-text"></span>
+            <div class="act-resume-actions">
+                <button id="app-update-btn" class="btn btn-primary">Tải bản mới</button>
+            </div>
         </div>
 
         <!-- Unfinished GPS activity banner -->
@@ -151,7 +163,8 @@
                         <input id="act-voicekm" type="checkbox" checked>
                         <span>Giọng đọc báo mỗi km (pace / tốc độ)</span>
                     </label>
-                    <p class="rec-hint">Giữ màn hình mở trong lúc ghi: trình duyệt có thể ngừng nhận GPS khi tắt màn hình hoặc chuyển sang ứng dụng khác.</p>
+                    <p class="rec-hint web-only">Giữ màn hình mở trong lúc ghi: trình duyệt có thể ngừng nhận GPS khi tắt màn hình hoặc chuyển sang ứng dụng khác. Dùng <a href="https://github.com/thanchet754/saitama/releases/latest/download/saitama.apk">app Android</a> để ghi khi tắt màn hình.</p>
+                    <p class="rec-hint native-only">App Android: GPS vẫn ghi khi tắt màn hình (có thông báo "Saitama đang ghi hoạt động"). Nếu máy tự tắt app, hãy tắt "Tối ưu pin" cho Saitama trong Cài đặt.</p>
                 </div>
             </details>
 
@@ -418,6 +431,7 @@
     </div>
 
     <!-- App Script -->
+    <script src="native.js"></script>
     <script src="exercises.js"></script>
     <script src="script.js"></script>
     <script src="recorder.js"></script>

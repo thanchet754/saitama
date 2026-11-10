@@ -124,7 +124,9 @@ function playBeep(freq = 700, duration = 0.1) {
 }
 
 function speakRep(number) {
-    if (!isVoiceEnabled || !window.speechSynthesis) return;
+    if (!isVoiceEnabled) return;
+    if (NativeApp.speak(number, 1.2)) return; // Android app: native TTS
+    if (!window.speechSynthesis) return;
     try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(String(number));
@@ -402,6 +404,7 @@ async function runVideoLoop(token) {
 // SCREEN WAKE LOCK (keeps phone screen on while training)
 // ==============================================================
 async function requestWakeLock() {
+    if (NativeApp.keepAwake(true)) { wakeLock = wakeLock || { native: true, release: async () => NativeApp.keepAwake(false) }; return; }
     try {
         if ('wakeLock' in navigator && !wakeLock) {
             wakeLock = await navigator.wakeLock.request('screen');

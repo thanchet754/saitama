@@ -1,0 +1,24 @@
+{
+  "name": "saitama-android",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Android shell for https://saitama-liart.vercel.app (loads the live web app, adds native background GPS)",
+  "scripts": {
+    "sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor-community/background-geolocation": "1.3.1",
+    "@capacitor-community/keep-awake": "8.0.1",
+    "@capacitor-community/text-to-speech": "8.0.2",
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/local-notifications": "8.3.1",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

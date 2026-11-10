@@ -67,7 +67,9 @@ function caloriesFor(type, distanceM, movingSec) {
 }
 
 function speakText(text) {
-    if (!isVoiceEnabled || !window.speechSynthesis) return;
+    if (!isVoiceEnabled) return;
+    if (NativeApp.speak(text, 1.0)) return;
+    if (!window.speechSynthesis) return;
     try {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
@@ -163,7 +165,57 @@ function setGpsBadge(text, level) {
     el.innerHTML = `<i class="fa-solid fa-satellite-dish"></i> ${text}`;
 }
 
-function startGpsWatch() {
+// ---- Native (Android app): background-capable GPS with a status-bar notification ----
+let nativeWatcherId = null;
+let nativeWatcherBackground = false;
+
+async function startNativeWatch(background) {
+    if (nativeWatcherId !== null && nativeWatcherBackground === background) return;
+    await stopNativeWatch();
+    if (background) await NativeApp.ensureNotificationPermission();
+    setGpsBadge('Đang tìm GPS...', 'wait');
+    const opts = { requestPermissions: true, stale: false, distanceFilter: 0 };
+    if (background) {
+        opts.backgroundTitle = 'Saitama đang ghi hoạt động';
+        opts.backgroundMessage = 'GPS vẫn ghi khi tắt màn hình. Mở app để tạm dừng hoặc kết thúc.';
+    }
+    nativeWatcherBackground = background;
+    try {
+        nativeWatcherId = await NativeApp.BackgroundGeolocation.addWatcher(opts, (loc, err) => {
+            if (err) {
+                if (err.code === 'NOT_AUTHORIZED') {
+                    setGpsBadge('Chưa cấp quyền vị trí', 'bad');
+                    showToast('Hãy cho phép Vị trí cho Saitama trong Cài đặt.', 'error');
+                    setTimeout(() => NativeApp.BackgroundGeolocation.openSettings(), 1500);
+                } else {
+                    setGpsBadge('Mất tín hiệu GPS', 'bad');
+                }
+                return;
+            }
+            if (!loc) return;
+            onGpsPosition({
+                timestamp: loc.time || Date.now(),
+                coords: { latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy, altitude: loc.altitude, speed: loc.speed }
+            });
+        });
+    } catch (e) {
+        nativeWatcherId = null;
+        console.warn('Native GPS failed', e);
+        setGpsBadge('Không bật được GPS', 'bad');
+    }
+}
+
+async function stopNativeWatch() {
+    if (nativeWatcherId === null) return;
+    const id = nativeWatcherId;
+    nativeWatcherId = null;
+    try { await NativeApp.BackgroundGeolocation.removeWatcher({ id }); } catch (e) {}
+}
+
+const useNativeGps = () => NativeApp.isNative && !!NativeApp.BackgroundGeolocation;
+
+function startGpsWatch(background = !!act) {
+    if (useNativeGps()) { startNativeWatch(background); return; }
     if (actWatchId !== null) return;
     if (!navigator.geolocation) {
         setGpsBadge('Thiết bị không hỗ trợ GPS', 'bad');
@@ -176,6 +228,7 @@ function startGpsWatch() {
 }
 
 function stopGpsWatch() {
+    if (useNativeGps()) { stopNativeWatch(); return; }
     if (actWatchId !== null) navigator.geolocation.clearWatch(actWatchId);
     actWatchId = null;
 }
@@ -226,7 +279,12 @@ function addTrackPoint(p) {
     if (d < Math.max(3, p.acc * 0.35)) return; // standing still / jitter
 
     act.distance += d;
-    act.lastMoveTs = Date.now();
+    // Moving time comes from GPS timestamps, so a gap (screen off, tunnel...) is
+    // still counted when you actually moved during it
+    const moving = v >= cfg.moveSpeed;
+    if (actSettings.autoPause && moving) act.movingMs += dt * 1000;
+    if (moving) act.lastMoveTs = Date.now();
+    act.lastAcceptTs = Date.now();
     act.maxSpeed = Math.max(act.maxSpeed, p.spd !== null ? p.spd : v);
     act.recent.push({ t: p.t, dist: act.distance });
 
@@ -276,7 +334,7 @@ function newActivity(type) {
     return {
         clientId: Date.now(), type, startedAt: Date.now(), status: 'running',
         points: [], distance: 0, movingMs: 0, elevGain: 0, maxSpeed: 0, splits: [],
-        last: null, altRef: null, lastMoveTs: Date.now(), lastTick: Date.now(), recent: [],
+        last: null, altRef: null, lastMoveTs: Date.now(), lastAcceptTs: null, lastTick: Date.now(), recent: [],
         pausedAt: null, pausedMs: 0
     };
 }
@@ -347,6 +405,7 @@ function endActivity() {
     clearActive();
     if (!isCameraActive) releaseWakeLock();
     if ($('mode-gps').hidden) stopGpsWatch();
+    else startGpsWatch(false); // back to foreground-only GPS (removes the tracking notification)
     if (actRouteLine) actRouteLine.setLatLngs([]);
     renderSplits();
     updateActControls();
@@ -364,10 +423,18 @@ function isAutoPaused() {
     return act && act.status === 'running' && actSettings.autoPause && Date.now() - act.lastMoveTs > 10000;
 }
 
+// Moving time to display: GPS-based total + the live part since the last accepted fix
+function displayMovingMs() {
+    if (!act) return 0;
+    if (!actSettings.autoPause || act.status !== 'running' || isAutoPaused() || !act.lastAcceptTs) return act.movingMs;
+    return act.movingMs + Math.min(Math.max(0, Date.now() - act.lastAcceptTs), 10000);
+}
+
 function tick() {
     if (!act) return;
     const now = Date.now();
-    if (act.status === 'running' && !isAutoPaused()) act.movingMs += now - act.lastTick;
+    // Without auto-pause, moving time is simply wall-clock time while running
+    if (act.status === 'running' && !actSettings.autoPause) act.movingMs += now - act.lastTick;
     act.lastTick = now;
     if (act.status === 'running' && !wakeLock && document.visibilityState === 'visible') requestWakeLock();
     renderActStats();
@@ -399,7 +466,7 @@ function renderActStats() {
     const type = act ? act.type : actSettings.type;
     const cfg = ACT_TYPES[type];
     const distance = act ? act.distance : 0;
-    const movingS = act ? act.movingMs / 1000 : 0;
+    const movingS = displayMovingMs() / 1000;
     const speed = act ? currentSpeed() : 0;
     const avgSpeed = movingS > 0 ? distance / movingS : 0;
 
@@ -752,11 +819,13 @@ ${pts}
   </trk>
 </gpx>`;
     const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+    const d = new Date(a.startedAt);
+    const fileName = `${a.type.toLowerCase()}-${d.toISOString().slice(0, 10)}.gpx`;
+    if (NativeApp.isNative) { NativeApp.saveAndShare(blob, fileName, 'File GPX'); return; }
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    const d = new Date(a.startedAt);
     link.href = url;
-    link.download = `${a.type.toLowerCase()}-${d.toISOString().slice(0, 10)}.gpx`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     link.remove();

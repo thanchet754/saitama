@@ -1,0 +1,7 @@
+# Android shell & CI are not part of the website
+app/
+.github/
+supabase/
+deploy.bat
+setup-android-key.ps1
+setup-android-key.bat

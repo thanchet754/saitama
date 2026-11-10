@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Saitama - AI Pose Tracker</string>
+    <string name="title_activity_main">Saitama - AI Pose Tracker</string>
+    <string name="package_name">com.thanchet754.saitama</string>
+    <string name="custom_url_scheme">com.thanchet754.saitama</string>
+    <string name="capacitor_background_geolocation_notification_channel_name">Ghi hoạt động GPS</string>
+    <string name="capacitor_background_geolocation_notification_color">#FF5E3A</string>
+</resources>

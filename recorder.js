@@ -246,7 +246,7 @@ function finalizeRecording() {
     const sizeMb = (recBlob.size / 1048576).toFixed(1);
     $('rec-meta').textContent = `${recFileName} · ${sizeMb} MB · ${ext.toUpperCase()}`;
 
-    const canShareFile = navigator.canShare && navigator.canShare({ files: [new File([recBlob], recFileName, { type })] });
+    const canShareFile = NativeApp.isNative || (navigator.canShare && navigator.canShare({ files: [new File([recBlob], recFileName, { type })] }));
     $('rec-share').hidden = !canShareFile;
 
     $('rec-modal').hidden = false;
@@ -261,6 +261,7 @@ window.closeRecModal = function () {
 
 window.shareRecording = async function () {
     if (!recBlob) return;
+    if (NativeApp.isNative) { await NativeApp.saveAndShare(recBlob, recFileName, 'Video buổi tập'); return; }
     try {
         const file = new File([recBlob], recFileName, { type: recBlob.type });
         await navigator.share({ files: [file], title: 'Video buổi tập - AI Pose Tracker' });
@@ -384,6 +385,13 @@ function initRecorderUI() {
     nameEl.addEventListener('input', () => { recSettings.deviceName = nameEl.value.slice(0, 60); saveRecSettings(); });
     gpsEl.addEventListener('change', () => { recSettings.gps = gpsEl.checked; addrEl.disabled = !gpsEl.checked; saveRecSettings(); });
     addrEl.addEventListener('change', () => { recSettings.address = addrEl.checked; saveRecSettings(); });
+
+    // Android app: a plain download link does nothing in a WebView -> use the share sheet
+    $('rec-download').addEventListener('click', (e) => {
+        if (!NativeApp.isNative || !recBlob) return;
+        e.preventDefault();
+        NativeApp.saveAndShare(recBlob, recFileName, 'Video buổi tập');
+    });
 
     detectDeviceName().then(name => {
         detectedDeviceName = name;
