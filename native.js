@@ -105,12 +105,13 @@ const NativeApp = (() => {
             if (footer) footer.insertAdjacentHTML('beforeend', `<br><span class="app-build">Ứng dụng Android · bản ${info.version} (build ${info.build})</span>`);
 
             const res = await fetch('/app-version.json', { cache: 'no-store' });
-            const cfg = await res.json();
+            const all = await res.json();
+            const cfg = all[window.Capacitor.getPlatform()] || {};
             if (NativeApp.build && cfg.minBuild && NativeApp.build < cfg.minBuild) {
                 const bar = document.getElementById('app-update');
-                document.getElementById('app-update-text').textContent = cfg.message || 'Có bản ứng dụng mới cần cài đặt.';
+                document.getElementById('app-update-text').textContent = cfg.message || all.message || 'Có bản ứng dụng mới cần cài đặt.';
                 bar.hidden = false;
-                document.getElementById('app-update-btn').onclick = () => NativeApp.Browser.open({ url: cfg.apkUrl });
+                document.getElementById('app-update-btn').onclick = () => NativeApp.Browser.open({ url: cfg.url });
             }
         } catch (e) {
             console.warn('Version check failed', e);

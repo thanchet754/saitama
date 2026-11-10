@@ -1,0 +1,73 @@
+name: iOS IPA (unsigned)
+
+# Builds an UNSIGNED .ipa of the Saitama iOS shell on a free macOS runner.
+# Install it with Sideloadly (Windows/Mac) using a free Apple ID - Sideloadly
+# signs it for your iPhone. Free Apple IDs must re-sign every 7 days.
+# Normal web changes need no rebuild: the app loads the live website.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-ipa
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Sync Capacitor
+        working-directory: app
+        run: npx cap sync ios
+
+      - name: Build unsigned app
+        working-directory: app/ios/App
+        run: |
+          xcodebuild -version
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            MARKETING_VERSION=1.0.${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tail -n 40
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$APP" || { echo "::error::No .app produced"; exit 1; }
+          rm -rf Payload && mkdir Payload && cp -R "$APP" Payload/
+          zip -qry "$RUNNER_TEMP/saitama-ios.ipa" Payload
+          ls -la "$RUNNER_TEMP/saitama-ios.ipa"
+
+      - name: Publish (rolling "ios-latest" release)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-latest
+          name: Saitama iOS (build ${{ github.run_number }})
+          prerelease: true
+          make_latest: false
+          files: ${{ runner.temp }}/saitama-ios.ipa
+          body: |
+            File **saitama-ios.ipa** chưa ký - cài bằng **Sideloadly** trên máy tính với Apple ID miễn phí.
+            Link cố định: https://github.com/thanchet754/saitama/releases/download/ios-latest/saitama-ios.ipa
+
+            - Apple ID miễn phí: cần "Refresh" lại trong Sideloadly mỗi 7 ngày (dữ liệu giữ nguyên).
+            - App tải giao diện trực tiếp từ https://saitama-liart.vercel.app nên cập nhật web có ngay.
+            - Build ${{ github.run_number }} · commit ${{ github.sha }}

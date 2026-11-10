@@ -1,5 +1,12 @@
 {
-  "minBuild": 1,
-  "apkUrl": "https://github.com/thanchet754/saitama/releases/latest/download/saitama.apk",
-  "message": "Có bản ứng dụng Android mới cần cài đặt để dùng tính năng mới."
+  "message": "Có bản ứng dụng mới cần cài đặt để dùng tính năng mới.",
+  "android": {
+    "minBuild": 1,
+    "url": "https://github.com/thanchet754/saitama/releases/latest/download/saitama.apk"
+  },
+  "ios": {
+    "minBuild": 1,
+    "url": "https://github.com/thanchet754/saitama/releases/tag/ios-latest",
+    "message": "Có bản app iOS mới. Tải file saitama-ios.ipa trên máy tính rồi cài lại bằng Sideloadly (dữ liệu vẫn giữ nguyên)."
+  }
 }
