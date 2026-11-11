@@ -351,6 +351,8 @@ async function startCamera() {
         requestWakeLock();
         startTimer();
         runVideoLoop(myToken);
+        // Every workout is recorded automatically (keeps going across a camera flip)
+        if (typeof startRecording === 'function') setTimeout(() => startRecording(), 300);
     } catch (err) {
         console.error('Camera error:', err);
         stopStream();

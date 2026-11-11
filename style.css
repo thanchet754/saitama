@@ -1913,7 +1913,9 @@ body.runner-on .demo-card { display: none; }
     overflow: hidden;
 }
 .ws-demo-stage { width: 100%; height: 100%; touch-action: none; }
-body.workout-on #btn-demo { top: calc(env(safe-area-inset-top) + 180px); right: 12px; }
+body.workout-on #btn-demo { top: calc(env(safe-area-inset-top) + 124px); right: 12px; }
+/* recording is automatic: no manual record button */
+#btn-record { display: none !important; }
 body.workout-on #btn-demo.active { background: rgba(255, 94, 58, 0.45); border-color: var(--primary); }
 
 .profile-strip { flex-wrap: nowrap; padding: 8px 10px 8px 14px; }

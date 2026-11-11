@@ -156,18 +156,17 @@ window.toggleRecording = async function () {
     }
 };
 
+// Called automatically every time training starts (recording is mandatory)
 async function startRecording() {
-    if (!isCameraActive) {
-        showToast('Hãy bật camera trước khi quay video.', 'warn');
-        return;
-    }
+    if (isRecording || !isCameraActive) return;
     if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
-        showToast('Trình duyệt này không hỗ trợ quay video. Hãy dùng Chrome, Edge hoặc Safari mới.', 'error');
+        showToast('Thiết bị này không hỗ trợ quay video, buổi tập vẫn được đếm bình thường.', 'warn');
         return;
     }
 
     recMime = pickMimeType();
     if (!detectedDeviceName) detectedDeviceName = await detectDeviceName();
+    if (isRecording || !isCameraActive) return; // stopped / started meanwhile
 
     // Recording canvas keeps a fixed size even if the camera is flipped/rotated
     recCanvas = document.createElement('canvas');
@@ -179,7 +178,7 @@ async function startRecording() {
 
     const stream = recCanvas.captureStream(30);
     try {
-        mediaRecorder = new MediaRecorder(stream, recMime ? { mimeType: recMime, videoBitsPerSecond: 5000000 } : undefined);
+        mediaRecorder = new MediaRecorder(stream, recMime ? { mimeType: recMime, videoBitsPerSecond: 1800000 } : undefined);
     } catch (e) {
         mediaRecorder = new MediaRecorder(stream);
     }
@@ -199,7 +198,6 @@ async function startRecording() {
     $('rec-indicator').hidden = false;
     updateRecTimer();
     recTimerInterval = setInterval(updateRecTimer, 500);
-    showToast('Đang quay video buổi tập...', 'info');
 }
 
 function stopRecording() {
