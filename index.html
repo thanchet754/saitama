@@ -211,6 +211,15 @@
             </div>
         </div>
 
+        <!-- How-to: 3D demo of the selected exercise -->
+        <section id="demo-card" class="demo-card" aria-label="Hướng dẫn động tác">
+            <div id="demo-stage" class="demo-stage" title="Kéo để xoay"><span class="demo-hint"><i class="fa-solid fa-arrows-left-right"></i> Kéo để xoay</span></div>
+            <div class="demo-info">
+                <h4 id="demo-name"></h4>
+                <ol id="demo-steps"></ol>
+            </div>
+        </section>
+
         <!-- Camera & Canvas Display Stage -->
         <section id="camera-stage" class="camera-stage">
             <!-- Hidden video input -->
@@ -270,10 +279,16 @@
 
             <!-- Guided workout countdown (rest / get ready / paused) -->
             <div id="runner-overlay" class="runner-overlay" hidden>
+                <div id="runner-ov-demo" class="runner-ov-demo"></div>
                 <div id="runner-ov-label" class="runner-ov-label">NGHỈ</div>
                 <div id="runner-ov-num" class="runner-ov-num">30</div>
                 <div id="runner-ov-next" class="runner-ov-next"></div>
                 <button class="runner-ov-skip" onclick="Runner.skip()"><i class="fa-solid fa-forward"></i> Bỏ qua</button>
+            </div>
+
+            <!-- In-workout how-to (toggled by the ? button) -->
+            <div id="ws-demo" class="ws-demo" hidden>
+                <div id="ws-demo-stage" class="ws-demo-stage"></div>
             </div>
 
             <!-- Recording indicator -->
@@ -324,6 +339,10 @@
 
             <button id="btn-record" class="btn btn-secondary btn-record" onclick="toggleRecording()" title="Quay video buổi tập (kèm thiết bị, GPS, thời gian)">
                 <i class="fa-solid fa-circle-dot"></i> <span>Quay video</span>
+            </button>
+
+            <button id="btn-demo" class="btn btn-secondary" onclick="toggleDemo()" title="Xem động tác mẫu" aria-label="Xem động tác mẫu">
+                <i class="fa-solid fa-person-chalkboard"></i> <span>Động tác mẫu</span>
             </button>
 
             <button id="btn-toggle-voice" class="btn btn-secondary active" onclick="toggleVoice()" title="Bật/Tắt giọng đọc số">
@@ -561,6 +580,7 @@
     <script src="recorder.js"></script>
     <script src="activity.js"></script>
     <script src="programs.js"></script>
+    <script src="demo3d.js"></script>
     <script src="offline.js"></script>
 </body>
 </html>

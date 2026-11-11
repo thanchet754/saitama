@@ -3,7 +3,7 @@
 // - versioned CDN libs, fonts, MediaPipe model: cache-first
 // - map tiles: cache-first, capped
 // - Supabase / geocoding APIs: never cached (data is stored in localStorage and synced by the page)
-const VERSION = 'saitama-v1';
+const VERSION = 'saitama-v2';
 const SHELL = `${VERSION}-shell`;
 const CDN = `${VERSION}-cdn`;
 const TILES = `${VERSION}-tiles`;
@@ -11,7 +11,7 @@ const MAX_TILES = 600;
 
 const SHELL_FILES = [
     '/', '/style.css', '/native.js', '/exercises.js', '/script.js', '/recorder.js',
-    '/activity.js', '/programs.js', '/offline.js', '/app-version.json'
+    '/activity.js', '/programs.js', '/demo3d.js', '/offline.js', '/app-version.json'
 ];
 
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/';
@@ -25,6 +25,7 @@ const CDN_WARM = [
     MP + 'pose_landmark_full.tflite',
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
     'https://cdn.jsdelivr.net/npm/@capacitor/core@8.6.0/dist/capacitor.js',
+    'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',

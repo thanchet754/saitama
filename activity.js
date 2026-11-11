@@ -100,6 +100,7 @@ window.setMode = function (mode) {
     } else if (!act) {
         stopGpsWatch();
     }
+    if (window.DemoUI) DemoUI.refresh();
 };
 
 // ---------- map ----------

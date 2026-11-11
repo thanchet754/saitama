@@ -185,6 +185,7 @@ window.selectExercise = function (type) {
     $('ws-ex-name').textContent = cfg.name;
     renderGuide(cfg);
     updateStartButton();
+    if (window.DemoUI) DemoUI.refresh();
 
     resetCounter();
 };
@@ -261,6 +262,7 @@ function enterWorkoutView() {
     if (document.body.classList.contains('workout-on')) return;
     document.body.classList.add('workout-on');
     window.scrollTo(0, 0);
+    if (window.DemoUI) DemoUI.refresh();
     // Phones (browser only): hide the address bar and keep the current orientation
     if (isPhoneLike() && !NativeApp.isNative && document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen({ navigationUI: 'hide' })
@@ -272,6 +274,7 @@ function enterWorkoutView() {
 function exitWorkoutView() {
     if (!document.body.classList.contains('workout-on')) return;
     document.body.classList.remove('workout-on');
+    if (window.DemoUI) DemoUI.refresh();
     try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch (e) {}
     if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
 }

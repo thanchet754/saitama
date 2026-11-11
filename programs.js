@@ -473,6 +473,7 @@ const Runner = {
         this.phase = 'idle';
         document.body.classList.remove('runner-on');
         $('runner-overlay').hidden = true;
+        if (window.DemoUI) { DemoUI.overlayKey = null; DemoUI.refresh(); }
         if (silent) $('runner-panel').hidden = true;
     },
 
@@ -595,8 +596,10 @@ const Runner = {
             $('runner-ov-label').textContent = this.paused ? 'TẠM DỪNG' : s.kind === 'rest' ? 'NGHỈ' : 'CHUẨN BỊ';
             $('runner-ov-num').textContent = this.paused ? '❚❚' : left;
             $('runner-ov-next').textContent = nw ? `${s.kind === 'rest' ? 'Tiếp theo: ' : ''}${stepLabel(nw)}` : 'Sắp xong!';
+            if (window.DemoUI) DemoUI.setOverlay(nw ? nw.ex : null); // show how the next move is done
         } else {
             ov.hidden = true;
+            if (window.DemoUI) DemoUI.setOverlay(null);
         }
 
         const cur = nw || s;
