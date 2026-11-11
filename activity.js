@@ -118,7 +118,7 @@ function initActMap() {
     actMap = L.map('act-map', { zoomControl: false, attributionControl: true }).setView([16.0, 106.0], 5);
     actTiles = makeTiles().addTo(actMap);
     L.control.zoom({ position: 'bottomright' }).addTo(actMap);
-    actRouteLine = L.polyline([], { color: '#FF5E3A', weight: 5, opacity: 0.95 }).addTo(actMap);
+    actRouteLine = L.polyline([], { color: '#FF5C34', weight: 5, opacity: 0.95 }).addTo(actMap);
     actMap.on('dragstart', () => { followMe = false; $('act-recenter').classList.add('show'); });
     if (act) redrawRoute();
     if (lastFix) updatePositionMarker(lastFix, true);
@@ -726,13 +726,13 @@ function drawDetailMap(route) {
     detailMap.eachLayer(l => { if (l !== detailTiles) detailMap.removeLayer(l); });
     const pts = (route || []).map(r => [r[0], r[1]]);
     if (pts.length >= 2) {
-        const line = L.polyline(pts, { color: '#FF5E3A', weight: 5 }).addTo(detailMap);
-        L.circleMarker(pts[0], { radius: 7, color: '#fff', weight: 2, fillColor: '#00C853', fillOpacity: 1 }).addTo(detailMap).bindTooltip('Bắt đầu');
+        const line = L.polyline(pts, { color: '#FF5C34', weight: 5 }).addTo(detailMap);
+        L.circleMarker(pts[0], { radius: 7, color: '#fff', weight: 2, fillColor: '#AEB8A0', fillOpacity: 1 }).addTo(detailMap).bindTooltip('Bắt đầu');
         L.circleMarker(pts[pts.length - 1], { radius: 7, color: '#fff', weight: 2, fillColor: '#FF3B30', fillOpacity: 1 }).addTo(detailMap).bindTooltip('Kết thúc');
         detailMap.fitBounds(line.getBounds(), { padding: [24, 24] });
     } else if (pts.length === 1) {
         detailMap.setView(pts[0], 16);
-        L.circleMarker(pts[0], { radius: 7, color: '#fff', weight: 2, fillColor: '#FF5E3A', fillOpacity: 1 }).addTo(detailMap);
+        L.circleMarker(pts[0], { radius: 7, color: '#fff', weight: 2, fillColor: '#FF5C34', fillOpacity: 1 }).addTo(detailMap);
     } else {
         detailMap.setView([16.0, 106.0], 5);
     }

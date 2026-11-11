@@ -46,7 +46,7 @@ const THEME_KEY = 'aiPoseFitness.theme';
 function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'light' ? '#F2F4F8' : '#0D0E12');
+    if (meta) meta.setAttribute('content', theme === 'light' ? '#E6F4FF' : '#1C1016');
     document.querySelectorAll('.theme-icon').forEach(i => {
         i.className = `fa-solid ${theme === 'light' ? 'fa-sun' : 'fa-moon'} theme-icon`;
     });
@@ -553,8 +553,8 @@ function drawNeonSkeleton(ctx, lm, width, height) {
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
     ctx.shadowBlur = 12;
-    ctx.shadowColor = '#00F2FE';
-    ctx.strokeStyle = '#00F2FE';
+    ctx.shadowColor = '#E9F056';
+    ctx.strokeStyle = '#E9F056';
 
     SKELETON_PAIRS.forEach(([i, j]) => {
         if (isVisible(lm[i]) && isVisible(lm[j])) {
@@ -572,7 +572,7 @@ function drawNeonSkeleton(ctx, lm, width, height) {
         const { x, y } = toPx(lm[idx], width, height);
         ctx.beginPath();
         ctx.arc(x, y, 6, 0, 2 * Math.PI);
-        ctx.fillStyle = '#00F2FE';
+        ctx.fillStyle = '#E9F056';
         ctx.fill();
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, 2 * Math.PI);
@@ -605,7 +605,7 @@ function roundRectPath(ctx, x, y, w, h, r) {
 }
 
 function drawJointAngleLabel(ctx, x, y, angle, isTargetReached) {
-    const color = isTargetReached ? '#00E676' : '#FF9500';
+    const color = isTargetReached ? '#B8C6A3' : '#FF9A6B';
     ctx.save();
     const text = `${angle}°`;
     ctx.font = 'bold 15px Outfit, sans-serif';
@@ -615,7 +615,7 @@ function drawJointAngleLabel(ctx, x, y, angle, isTargetReached) {
     const boxW = textWidth + 14;
     const boxX = Math.min(x + 10, ctx.canvas.width - boxW - 4);
 
-    ctx.fillStyle = 'rgba(13, 14, 18, 0.85)';
+    ctx.fillStyle = 'rgba(28, 16, 22, 0.85)';
     ctx.beginPath();
     roundRectPath(ctx, boxX, y - 13, boxW, 24, 12);
     ctx.fill();

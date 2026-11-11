@@ -17,6 +17,6 @@
   "android": {
     "useLegacyBridge": true,
     "allowMixedContent": false,
-    "backgroundColor": "#0D0E12"
+    "backgroundColor": "#1C1016"
   }
 }

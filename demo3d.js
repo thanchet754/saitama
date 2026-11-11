@@ -168,7 +168,7 @@ const ExerciseDemo = (() => {
         camera = new THREE.PerspectiveCamera(32, 1, 0.05, 50);
         target = new THREE.Vector3(0, 0.8, 0);
 
-        scene.add(new THREE.HemisphereLight(0xffffff, 0x444455, 1.6));
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x351e28, 1.6));
         const sun = new THREE.DirectionalLight(0xffffff, 1.8);
         sun.position.set(2.5, 5, 3);
         sun.castShadow = true;
@@ -177,21 +177,21 @@ const ExerciseDemo = (() => {
         scene.add(sun, sun.target);
 
         floor = new THREE.Mesh(new THREE.CircleGeometry(1.7, 48),
-            new THREE.MeshStandardMaterial({ color: 0x8a90a0, transparent: true, opacity: 0.28, roughness: 1 }));
+            new THREE.MeshStandardMaterial({ color: 0xaeb8a0, transparent: true, opacity: 0.28, roughness: 1 }));
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
 
         wall = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.9, 0.06),
-            new THREE.MeshStandardMaterial({ color: 0x9aa3b5, roughness: 0.9, transparent: true, opacity: 0.55 }));
+            new THREE.MeshStandardMaterial({ color: 0xd7efff, roughness: 0.9, transparent: true, opacity: 0.55 }));
         wall.receiveShadow = true;
         scene.add(wall);
 
-        const skin = new THREE.MeshStandardMaterial({ color: 0xd8dce6, roughness: 0.55 });
-        const shirt = new THREE.MeshStandardMaterial({ color: 0xff5e3a, roughness: 0.6 });
-        const shorts = new THREE.MeshStandardMaterial({ color: 0x2c3140, roughness: 0.7 });
-        const shoe = new THREE.MeshStandardMaterial({ color: 0x00c2d1, roughness: 0.5 });
-        const metal = new THREE.MeshStandardMaterial({ color: 0x3a3f4b, roughness: 0.35, metalness: 0.6 });
+        const skin = new THREE.MeshStandardMaterial({ color: 0xc9dfee, roughness: 0.55 });
+        const shirt = new THREE.MeshStandardMaterial({ color: 0xff5c34, roughness: 0.6 });
+        const shorts = new THREE.MeshStandardMaterial({ color: 0x351e28, roughness: 0.7 });
+        const shoe = new THREE.MeshStandardMaterial({ color: 0xe9f056, roughness: 0.5 });
+        const metal = new THREE.MeshStandardMaterial({ color: 0x4a2a38, roughness: 0.35, metalness: 0.6 });
 
         const G = () => new THREE.Group();
         const mesh = (geo, mat) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; return m; };

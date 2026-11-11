@@ -306,8 +306,8 @@ function composeRecordingFrame(force) {
 
     // Top-left: rep counter
     const cardW = 170 * s, cardH = 104 * s;
-    fillRoundRect(ctx, pad, pad, cardW, cardH, 16 * s, 'rgba(13,14,18,0.78)');
-    ctx.fillStyle = '#FF5E3A';
+    fillRoundRect(ctx, pad, pad, cardW, cardH, 16 * s, 'rgba(28, 16, 22,0.78)');
+    ctx.fillStyle = '#FF5C34';
     ctx.font = `900 ${13 * s}px Outfit, sans-serif`;
     ctx.fillText(cfg.mode === 'hold' ? 'SỐ GIÂY' : 'SỐ LẦN (REPS)', pad + 16 * s, pad + 26 * s);
     ctx.fillStyle = '#FFFFFF';
@@ -318,7 +318,7 @@ function composeRecordingFrame(force) {
     const recText = `REC ${formatTime(recElapsedSec())}`;
     ctx.font = `800 ${16 * s}px Inter, sans-serif`;
     const recW = ctx.measureText(recText).width + 44 * s;
-    fillRoundRect(ctx, W - pad - recW, pad, recW, 34 * s, 17 * s, 'rgba(13,14,18,0.78)');
+    fillRoundRect(ctx, W - pad - recW, pad, recW, 34 * s, 17 * s, 'rgba(28, 16, 22,0.78)');
     const blink = Math.floor(performance.now() / 600) % 2 === 0;
     ctx.fillStyle = blink ? '#FF3B30' : 'rgba(255,59,48,0.35)';
     ctx.beginPath();
@@ -347,8 +347,8 @@ function composeRecordingFrame(force) {
     const panelH = titleH + lines.length * lineH + 18 * s;
     const panelY = H - pad - panelH;
     const panelW = W - pad * 2;
-    fillRoundRect(ctx, pad, panelY, panelW, panelH, 14 * s, 'rgba(13,14,18,0.72)');
-    ctx.fillStyle = '#FF5E3A';
+    fillRoundRect(ctx, pad, panelY, panelW, panelH, 14 * s, 'rgba(28, 16, 22,0.72)');
+    ctx.fillStyle = '#FF5C34';
     ctx.fillRect(pad, panelY + 12 * s, 4 * s, panelH - 24 * s);
 
     const tx = pad + 18 * s;
@@ -360,7 +360,7 @@ function composeRecordingFrame(force) {
     lines.forEach(([label, value], i) => {
         const y = panelY + titleH + 14 * s + i * lineH;
         ctx.font = `700 ${16 * s}px Inter, sans-serif`;
-        ctx.fillStyle = '#00F2FE';
+        ctx.fillStyle = '#E9F056';
         const labelText = `${label}: `;
         ctx.fillText(labelText, tx, y);
         const lw = ctx.measureText(labelText).width;
