@@ -119,6 +119,7 @@ const VideoSync = (() => {
     // ---------- Telegram ----------
     const TG_BOT = 'saitama_ngoc_workout_bot';
     let tgLinked = null; // null = unknown, false / { tg_name }
+    let tgGroup = null;  // shared group set with /setgroup: { group_title }
     const sending = new Set();
 
     async function forward(clientId) {
@@ -138,7 +139,7 @@ const VideoSync = (() => {
 
     // retry anything uploaded but not delivered yet (offline, not linked yet, temporary errors)
     async function forwardPending() {
-        if (!sb || !sbUserId || !navigator.onLine || !tgLinked) return;
+        if (!sb || !sbUserId || !navigator.onLine || !(tgLinked || tgGroup)) return;
         const { data } = await sb.from(VIDEO_TABLE).select('client_id')
             .in('telegram_status', ['pending', 'no_link', 'error']).eq('storage_deleted', false)
             .order('recorded_at').limit(20);
@@ -149,6 +150,8 @@ const VideoSync = (() => {
         if (!sb || !sbUserId || !navigator.onLine) return;
         const { data } = await sb.from('saitama_telegram_links').select('tg_name, linked_at').maybeSingle();
         tgLinked = data || false;
+        const { data: cfg } = await sb.from('saitama_telegram_config').select('group_chat_id, group_title').maybeSingle();
+        tgGroup = cfg && cfg.group_chat_id ? cfg : null;
         renderTgButton();
     }
 
@@ -156,8 +159,12 @@ const VideoSync = (() => {
         const b = $('tg-connect');
         if (!b) return;
         b.hidden = !sbUserId;
-        b.classList.toggle('linked', !!tgLinked);
-        b.innerHTML = tgLinked
+        b.classList.toggle('linked', !!(tgLinked || tgGroup));
+        const esc = (t) => String(t || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        b.title = tgGroup ? 'Mọi video đang gửi vào nhóm Telegram chung' : '';
+        b.innerHTML = tgGroup
+            ? `<i class="fa-brands fa-telegram"></i> <span>Nhóm: ${esc(tgGroup.group_title)}</span>`
+            : tgLinked
             ? `<i class="fa-brands fa-telegram"></i> <span>Đã kết nối</span>`
             : `<i class="fa-brands fa-telegram"></i> <span>Kết nối Telegram</span>`;
     }
@@ -189,6 +196,7 @@ const VideoSync = (() => {
             await checkLink();
             if (tgLinked) {
                 clearInterval(linkPoll);
+                if (!tgGroup) showToast('Muốn gửi vào nhóm chung: thêm bot vào nhóm rồi gõ /setgroup trong nhóm.', 'info');
                 showToast('Đã kết nối Telegram! Video sẽ tự gửi về đó.', 'info');
                 forwardPending();
             }
@@ -236,7 +244,7 @@ const VideoSync = (() => {
     function statusOf(segs) {
         if (segs.every(v => v.telegram_status === 'sent')) return { cls: 'sent', html: '<i class="fa-brands fa-telegram"></i> Đã gửi Telegram' };
         if (segs.some(v => v.telegram_status === 'too_large')) return { cls: 'warn', html: '<i class="fa-solid fa-triangle-exclamation"></i> Quá 50 MB, giữ trên đám mây' };
-        if (!tgLinked) return { cls: 'cloud', html: '<i class="fa-solid fa-cloud"></i> Trên đám mây · chưa kết nối Telegram' };
+        if (!tgLinked && !tgGroup) return { cls: 'cloud', html: '<i class="fa-solid fa-cloud"></i> Trên đám mây · chưa kết nối Telegram' };
         return { cls: 'wait', html: '<i class="fa-solid fa-paper-plane"></i> Đang gửi Telegram...' };
     }
 

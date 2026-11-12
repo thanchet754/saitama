@@ -37,8 +37,13 @@ Deno.serve(async (req) => {
         const setStatus = (patch: Record<string, unknown>) =>
             admin.from('saitama_videos').update(patch).eq('user_id', user.id).eq('client_id', client_id);
 
-        const { data: link } = await admin.from('saitama_telegram_links').select('chat_id').eq('user_id', user.id).maybeSingle();
-        if (!link) { await setStatus({ telegram_status: 'no_link' }); return json({ status: 'no_link' }); }
+        // shared group (if set with /setgroup) wins; otherwise the user's own linked chat
+        const { data: cfg } = await admin.from('saitama_telegram_config').select('group_chat_id').eq('id', 1).maybeSingle();
+        const { data: link } = await admin.from('saitama_telegram_links').select('chat_id, tg_name').eq('user_id', user.id).maybeSingle();
+        const targetChat = cfg?.group_chat_id || link?.chat_id;
+        if (!targetChat) { await setStatus({ telegram_status: 'no_link' }); return json({ status: 'no_link' }); }
+        const who = link?.tg_name || `Thành viên ${user.id.slice(0, 4)}`; // never expose emails in the group
+        const caption = cfg?.group_chat_id && who ? `👤 ${who}\n${row.caption || row.file_name}` : (row.caption || row.file_name);
         if (row.size_bytes > TG_MAX) { await setStatus({ telegram_status: 'too_large' }); return json({ status: 'too_large' }); }
 
         // reassemble the file from its parts
@@ -51,8 +56,8 @@ Deno.serve(async (req) => {
         const file = new File(parts, row.file_name, { type: row.mime });
 
         const form = new FormData();
-        form.append('chat_id', String(link.chat_id));
-        form.append('caption', (row.caption || row.file_name).slice(0, 1000));
+        form.append('chat_id', String(targetChat));
+        form.append('caption', caption.slice(0, 1000));
         form.append('supports_streaming', 'true');
         const isMp4 = String(row.mime).includes('mp4');
         form.append(isMp4 ? 'video' : 'document', file);
