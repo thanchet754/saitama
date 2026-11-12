@@ -1071,6 +1071,7 @@ function saveSession() {
 // (re-sync after reconnecting is handled in offline.js)
 
 function renderHistory() {
+    if (window.ProgressCard) ProgressCard.schedule();
     if (!sbUserId) {
         historyListEl.innerHTML = '<li class="history-empty">Đăng nhập để xem lịch sử tập luyện.</li>';
         return;

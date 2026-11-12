@@ -227,6 +227,7 @@ async function saveProfile(p) {
     p.updatedAt = Date.now();
     profile = p;
     storeLocalProfile(p);
+    if (window.ProgressCard) ProgressCard.reset(); // calories depend on weight
     if (typeof actSettings !== 'undefined') { actSettings.weight = Math.round(p.weight_kg); saveActSettings(); }
     renderProgramPanel();
     if (!sbUserId) return;

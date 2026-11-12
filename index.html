@@ -21,7 +21,15 @@
     <meta property="og:title" content="AI Pose Fitness - Đếm Rep Bằng AI">
     <meta property="og:description" content="AI vẽ khung xương và đếm rep tự động qua camera điện thoại hoặc máy tính.">
     <meta property="og:type" content="website">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230D0E12'/%3E%3Cpath d='M58 8 26 56h22l-6 36 32-48H52z' fill='%23FF5E3A'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="/icons/favicon.png">
+    <!-- Installable web app (Add to Home Screen on iPhone / Android) -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Saitama">
+    <meta property="og:image" content="https://saitama-liart.vercel.app/icons/icon-512.png">
 
     <!-- Google Fonts & FontAwesome -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,6 +74,9 @@
                 <button class="theme-toggle" onclick="toggleTheme()" aria-label="Đổi nền sáng / tối" title="Đổi nền sáng / tối">
                     <i class="fa-solid fa-moon theme-icon"></i>
                 </button>
+                <button id="install-btn" class="theme-toggle install-btn" aria-label="Cài app" title="Cài app lên màn hình chính" hidden>
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </button>
                 <button id="account-btn" class="theme-toggle" onclick="toggleAccountMenu()" aria-label="Tài khoản" title="Tài khoản" hidden>
                     <i class="fa-solid fa-circle-user"></i>
                 </button>
@@ -76,6 +87,13 @@
                 </div>
             </div>
         </header>
+
+        <!-- iPhone: how to install the web app -->
+        <div id="ios-hint" class="act-resume app-update" hidden>
+            <i class="fa-solid fa-mobile-screen-button"></i>
+            <span>Cài Saitama như app: bấm <i class="fa-solid fa-arrow-up-from-bracket"></i> <b>Chia sẻ</b> ở thanh dưới Safari → <b>Thêm vào MH chính</b>. Mở từ biểu tượng mới để dùng toàn màn hình, không cần cài đặt gì thêm.</span>
+            <div class="act-resume-actions"><button class="btn btn-outline" onclick="closeIosHint()">Đã hiểu</button></div>
+        </div>
 
         <!-- Shown while there is no internet connection -->
         <div id="offline-bar" class="offline-bar" role="status" aria-live="polite" hidden>
@@ -392,6 +410,13 @@
         </section>
 
         <!-- Workout History -->
+        <!-- Last 7 days -->
+        <section id="progress-card" class="progress-card" hidden aria-label="Tiến độ 7 ngày">
+            <div class="progress-head"><h3><i class="fa-solid fa-chart-column"></i> 7 ngày qua</h3></div>
+            <div id="progress-total" class="progress-total"></div>
+            <div id="progress-bars" class="progress-bars"></div>
+        </section>
+
         <section class="history-panel">
             <div class="history-head">
                 <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Tập Luyện</h3>
@@ -597,5 +622,6 @@
     <script src="programs.js"></script>
     <script src="demo3d.js"></script>
     <script src="offline.js"></script>
+    <script src="progress.js"></script>
 </body>
 </html>

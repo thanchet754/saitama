@@ -3,14 +3,14 @@
 // - versioned CDN libs, fonts, MediaPipe model: cache-first
 // - map tiles: cache-first, capped
 // - Supabase / geocoding APIs: never cached (data is stored in localStorage and synced by the page)
-const VERSION = 'saitama-v5';
+const VERSION = 'saitama-v6';
 const SHELL = `${VERSION}-shell`;
 const CDN = `${VERSION}-cdn`;
 const TILES = `${VERSION}-tiles`;
 const MAX_TILES = 600;
 
 const SHELL_FILES = [
-    '/', '/style.css', '/native.js', '/exercises.js', '/script.js', '/recorder.js', '/videos.js',
+    '/', '/style.css', '/native.js', '/exercises.js', '/script.js', '/recorder.js', '/videos.js', '/progress.js', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png',
     '/activity.js', '/programs.js', '/demo3d.js', '/offline.js', '/app-version.json'
 ];
 

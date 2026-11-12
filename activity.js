@@ -642,6 +642,7 @@ async function syncActivities() {
 }
 
 function renderActList() {
+    if (window.ProgressCard) ProgressCard.schedule();
     const el = $('act-list');
     if (!sbUserId) { el.innerHTML = '<li class="history-empty">Đăng nhập để xem hoạt động.</li>'; return; }
     const list = loadActCache();
