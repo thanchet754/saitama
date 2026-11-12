@@ -3,7 +3,7 @@
 // - versioned CDN libs, fonts, MediaPipe model: cache-first
 // - map tiles: cache-first, capped
 // - Supabase / geocoding APIs: never cached (data is stored in localStorage and synced by the page)
-const VERSION = 'saitama-v3';
+const VERSION = 'saitama-v4';
 const SHELL = `${VERSION}-shell`;
 const CDN = `${VERSION}-cdn`;
 const TILES = `${VERSION}-tiles`;

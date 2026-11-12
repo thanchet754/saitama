@@ -159,7 +159,15 @@ window.toggleRecording = async function () {
     }
 };
 
-// Called automatically every time training starts (recording is mandatory)
+// Called automatically every time training starts (recording is mandatory).
+// The session is recorded as a chain of ~2.5 min segments: each one is a complete,
+// playable file small enough for Telegram (bots accept <= 50 MB).
+const REC_SEGMENT_MS = 150000;
+let recStream = null;
+let recSegIndex = 0;
+let recSegTimer = null;
+let recSession = []; // finished segments of the current session: { blob, fileName, clientId, index }
+
 async function startRecording() {
     if (isRecording || !isCameraActive) return;
     if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
@@ -179,21 +187,15 @@ async function startRecording() {
     recStartTs = performance.now();
     composeRecordingFrame(true);
 
-    const stream = recCanvas.captureStream(30);
-    try {
-        mediaRecorder = new MediaRecorder(stream, recMime ? { mimeType: recMime, videoBitsPerSecond: 1800000 } : undefined);
-    } catch (e) {
-        mediaRecorder = new MediaRecorder(stream);
-    }
-    recMime = mediaRecorder.mimeType || recMime || 'video/webm';
-    recChunks = [];
-    mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size) recChunks.push(e.data); };
-    mediaRecorder.onstop = finalizeRecording;
-    mediaRecorder.start(1000);
+    recStream = recCanvas.captureStream(30);
+    recSegIndex = 0;
+    recSession = [];
+    recClientId = Date.now();
+    startSegment();
+    recSegTimer = setInterval(rotateSegment, REC_SEGMENT_MS);
 
     isRecording = true;
     recStartTs = performance.now();
-    recClientId = Date.now();
     startGeo();
 
     const btn = $('btn-record');
@@ -204,13 +206,43 @@ async function startRecording() {
     recTimerInterval = setInterval(updateRecTimer, 500);
 }
 
+function startSegment() {
+    let rec;
+    try {
+        rec = new MediaRecorder(recStream, recMime ? { mimeType: recMime, videoBitsPerSecond: 1800000 } : undefined);
+    } catch (e) {
+        rec = new MediaRecorder(recStream);
+    }
+    recMime = rec.mimeType || recMime || 'video/webm';
+    const seg = { index: ++recSegIndex, chunks: [], startedAt: Date.now(), startPerf: performance.now(), durationMs: 0, last: false };
+    rec._seg = seg;
+    rec.ondataavailable = (e) => { if (e.data && e.data.size) seg.chunks.push(e.data); };
+    rec.onstop = () => finalizeSegment(seg);
+    rec.start(1000);
+    mediaRecorder = rec;
+}
+
+// Start the next file first, then close the previous one (no gap in between)
+function rotateSegment() {
+    if (!isRecording || !mediaRecorder) return;
+    const old = mediaRecorder;
+    startSegment();
+    old._seg.durationMs = performance.now() - old._seg.startPerf;
+    try { old.stop(); } catch (e) {}
+}
+
 function stopRecording() {
     if (!isRecording) return;
     isRecording = false;
     recDurationMs = performance.now() - recStartTs;
     clearInterval(recTimerInterval);
+    clearInterval(recSegTimer);
     stopGeo();
-    try { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); } catch (e) {}
+    if (mediaRecorder) {
+        mediaRecorder._seg.last = true;
+        mediaRecorder._seg.durationMs = performance.now() - mediaRecorder._seg.startPerf;
+        try { if (mediaRecorder.state !== 'inactive') mediaRecorder.stop(); } catch (e) {}
+    }
     const btn = $('btn-record');
     btn.classList.remove('recording');
     btn.innerHTML = '<i class="fa-solid fa-circle-dot"></i> <span>Quay video</span>';
@@ -225,29 +257,45 @@ function updateRecTimer() {
     $('rec-time').textContent = formatTime(recElapsedSec());
 }
 
-function finalizeRecording() {
-    if (!recChunks.length) {
-        showToast('Không có dữ liệu video. Hãy thử quay lại.', 'error');
-        return;
-    }
-    const type = recMime.split(';')[0];
-    const blob = new Blob(recChunks, { type });
-    recChunks = [];
-    const ext = type.includes('mp4') ? 'mp4' : 'webm';
-    const d = new Date(recClientId);
-    const pad = (n) => String(n).padStart(2, '0');
-    const slug = EXERCISES[currentExercise].name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    const fileName = `ai-pose-${slug}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
+function finalizeSegment(seg) {
+    const sessionId = recClientId;
+    if (seg.chunks.length) {
+        const type = recMime.split(';')[0];
+        const blob = new Blob(seg.chunks, { type });
+        seg.chunks = [];
+        const ext = type.includes('mp4') ? 'mp4' : 'webm';
+        const d = new Date(seg.startedAt);
+        const pad = (n) => String(n).padStart(2, '0');
+        const ex = EXERCISES[currentExercise];
+        const slug = ex.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+        const multi = seg.index > 1 || !seg.last;
+        const fileName = `ai-pose-${slug}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${multi ? '-phan' + seg.index : ''}.${ext}`;
+        const durationS = Math.round(seg.durationMs / 1000);
+        const clientId = sessionId + seg.index; // unique per segment, ordered within the session
 
-    // 1) always upload to the cloud (queued on this device until it succeeds)
-    if (window.VideoSync) {
-        VideoSync.queue(blob, {
-            clientId: recClientId, fileName, mime: type, exercise: currentExercise,
-            durationS: Math.round(recDurationMs / 1000), recordedAt: new Date(recClientId).toISOString()
-        });
+        const lines = [
+            `🏋️ ${ex.name} · ${d.toLocaleDateString('vi-VN')} ${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`,
+            `⏱ ${formatTime(durationS)}${multi ? ` · Phần ${seg.index}${seg.last ? ' (cuối)' : ''}` : ''}${repCount > 0 ? ` · ${repCount} ${ex.mode === 'hold' ? 'giây' : 'rep'}` : ''}`,
+            `📱 ${recSettings.deviceName || detectedDeviceName || ''}`
+        ];
+        if (geo.place) lines.push(`📍 ${geo.place}`);
+
+        // 1) always upload (queued on this device until it succeeds), then forwarded to Telegram
+        if (window.VideoSync) {
+            VideoSync.queue(blob, {
+                clientId, sessionId, segment: seg.index, isLast: seg.last, caption: lines.join('\n'),
+                fileName, mime: type, exercise: currentExercise, durationS, recordedAt: d.toISOString()
+            });
+        }
+        recSession.push({ blob, fileName, clientId, index: seg.index });
     }
-    // 2) then ask whether to keep a copy on this device
-    openRecPreview(blob, fileName, { clientId: recClientId });
+    // 2) at the end of the session ask whether to keep a copy on this device
+    if (seg.last) {
+        const parts = recSession.sort((x, y) => x.index - y.index);
+        recSession = [];
+        if (!parts.length) { showToast('Không có dữ liệu video. Hãy thử quay lại.', 'error'); return; }
+        openRecPreview(parts[0].blob, parts[0].fileName, { clientId: parts[0].clientId, parts });
+    }
 }
 
 // Show a video in the preview dialog (new recording or one loaded from the cloud)
@@ -266,6 +314,11 @@ function openRecPreview(blob, fileName, opts = {}) {
     $('rec-meta').textContent = `${fileName} · ${sizeMb} MB`;
     recPreviewClientId = opts.clientId || null;
     if (window.VideoSync) VideoSync.renderStatus();
+    if (opts.parts !== undefined) recPreviewParts = opts.parts || [];
+    const chips = $('rec-parts');
+    chips.hidden = recPreviewParts.length < 2;
+    chips.innerHTML = recPreviewParts.map((p, i) =>
+        `<button class="${p.clientId === recPreviewClientId ? 'active' : ''}" onclick="showRecPart(${i})">Phần ${i + 1}</button>`).join('');
 
     let canShareFile = NativeApp.isNative;
     try { canShareFile = canShareFile || !!(navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type })] })); } catch (e) {}
@@ -275,7 +328,14 @@ function openRecPreview(blob, fileName, opts = {}) {
     document.body.classList.add('modal-open');
 }
 
+let recPreviewParts = [];
+window.showRecPart = function (i) {
+    const p = recPreviewParts[i];
+    if (p) openRecPreview(p.blob, p.fileName, { clientId: p.clientId });
+};
+
 window.closeRecModal = function () {
+    recPreviewParts = [];
     recPreviewClientId = null;
     $('rec-modal').hidden = true;
     document.body.classList.remove('modal-open');

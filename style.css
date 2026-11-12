@@ -2142,3 +2142,22 @@ body.workout-on .runner-actions .btn {
     background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 0 14px; font-size: 14px;
 }
 .video-del:hover { color: #FF6B60; }
+
+/* ---------- Telegram ---------- */
+.tg-connect {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    background: #229ED9; color: #FFF; border: 0; border-radius: 20px; padding: 6px 12px; font-size: 12px; font-weight: 800;
+}
+.tg-connect[hidden] { display: none; }
+.tg-connect.linked { background: transparent; color: var(--neon-green); border: 1px solid currentColor; }
+.video-st { font-size: 11px; font-weight: 700; color: var(--text-muted); display: inline-flex; gap: 5px; align-items: center; }
+.video-st.sent { color: #2AABEE; }
+.video-st.warn { color: var(--neon-orange); }
+.video-st.wait { color: var(--neon-cyan); }
+.rec-parts { display: flex; gap: 6px; flex-wrap: wrap; }
+.rec-parts[hidden] { display: none; }
+.rec-parts button {
+    background: var(--surface-soft); border: 1px solid var(--card-border); color: var(--text-white);
+    border-radius: 16px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.rec-parts button.active { background: var(--primary); border-color: var(--primary); color: #FFF; }

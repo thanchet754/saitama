@@ -410,6 +410,7 @@
             <div class="history-head">
                 <h3><i class="fa-solid fa-film"></i> Video Buổi Tập</h3>
                 <span id="video-sync" class="sync-status cloud" hidden></span>
+                <button id="tg-connect" class="tg-connect" onclick="connectTelegram()" hidden><i class="fa-brands fa-telegram"></i> <span>Kết nối Telegram</span></button>
             </div>
             <ul id="video-list" class="history-list"></ul>
         </section>
@@ -437,6 +438,7 @@
                 <button class="rec-close" onclick="closeRecModal()" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <video id="rec-preview" controls playsinline></video>
+            <div id="rec-parts" class="rec-parts" hidden></div>
             <p id="rec-meta" class="rec-meta"></p>
             <p id="rec-cloud" class="rec-cloud"></p>
             <p id="rec-ask" class="rec-ask">Lưu video này vào máy?</p>
