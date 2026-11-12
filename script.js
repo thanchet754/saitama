@@ -894,6 +894,7 @@ function onUserChanged(user) {
             syncHistory();
             if (window.onActivitiesUserChanged) onActivitiesUserChanged();
             if (window.onProgramsUserChanged) onProgramsUserChanged();
+            if (window.VideoSync) VideoSync.onUserChanged();
         }
     } else {
         if (isCameraActive) stopCamera();
@@ -904,6 +905,7 @@ function onUserChanged(user) {
         setSyncStatus('local', 'Chưa đăng nhập');
         if (window.onActivitiesUserChanged) onActivitiesUserChanged();
         if (window.onProgramsUserChanged) onProgramsUserChanged();
+        if (window.VideoSync) VideoSync.onUserChanged();
         showAuth('login');
     }
 }

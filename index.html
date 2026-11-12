@@ -405,6 +405,15 @@
             <ul id="history-list" class="history-list"></ul>
         </section>
 
+        <!-- Workout videos saved in the cloud -->
+        <section class="history-panel">
+            <div class="history-head">
+                <h3><i class="fa-solid fa-film"></i> Video Buổi Tập</h3>
+                <span id="video-sync" class="sync-status cloud" hidden></span>
+            </div>
+            <ul id="video-list" class="history-list"></ul>
+        </section>
+
         <!-- Instructions (collapsed) -->
         <details class="rec-settings">
             <summary><i class="fa-solid fa-lightbulb"></i> Mẹo đặt camera <i class="fa-solid fa-chevron-down rec-chevron"></i></summary>
@@ -429,9 +438,12 @@
             </div>
             <video id="rec-preview" controls playsinline></video>
             <p id="rec-meta" class="rec-meta"></p>
+            <p id="rec-cloud" class="rec-cloud"></p>
+            <p id="rec-ask" class="rec-ask">Lưu video này vào máy?</p>
             <div class="rec-actions">
-                <a id="rec-download" class="btn btn-primary" download><i class="fa-solid fa-download"></i> <span>Tải video</span></a>
+                <a id="rec-download" class="btn btn-primary" download><i class="fa-solid fa-download"></i> <span>Lưu vào máy</span></a>
                 <button id="rec-share" class="btn btn-secondary" onclick="shareRecording()" hidden><i class="fa-solid fa-share-nodes"></i> <span>Chia sẻ</span></button>
+                <button class="btn btn-outline" onclick="closeRecModal()"><i class="fa-solid fa-xmark"></i> <span>Không</span></button>
             </div>
         </div>
     </div>
@@ -578,6 +590,7 @@
     <script src="exercises.js"></script>
     <script src="script.js"></script>
     <script src="recorder.js"></script>
+    <script src="videos.js"></script>
     <script src="activity.js"></script>
     <script src="programs.js"></script>
     <script src="demo3d.js"></script>

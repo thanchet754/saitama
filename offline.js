@@ -28,7 +28,8 @@ function pendingCount() {
     if (!sbUserId) return 0;
     const h = loadHistory().filter(x => !x.synced).length;
     const a = loadActCache().filter(x => !x.synced && x.route).length;
-    return h + a + (isProfileDirty() ? 1 : 0);
+    const v = window.VideoSync ? VideoSync.pendingCount : 0;
+    return h + a + v + (isProfileDirty() ? 1 : 0);
 }
 
 function renderOfflineBar() {
@@ -52,7 +53,7 @@ async function syncAllNow(announce) {
     const before = pendingCount();
     if (announce) showToast(before ? `Đã có mạng · đang tải ${before} mục lên...` : 'Đã có mạng trở lại.', 'info');
     try {
-        await Promise.allSettled([syncHistory(), syncActivities(), syncProfileIfDirty()]);
+        await Promise.allSettled([syncHistory(), syncActivities(), syncProfileIfDirty(), window.VideoSync ? VideoSync.uploadPending() : null]);
     } finally {
         syncing = false;
     }

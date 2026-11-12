@@ -5,6 +5,9 @@
 const REC_SETTINGS_KEY = 'aiPoseFitness.recSettings';
 
 let isRecording = false;
+let recClientId = 0;          // id of the recording (= its start time)
+let recDurationMs = 0;
+let recPreviewClientId = null; // video shown in the preview dialog
 let mediaRecorder = null;
 let recChunks = [];
 let recCanvas = null;
@@ -190,6 +193,7 @@ async function startRecording() {
 
     isRecording = true;
     recStartTs = performance.now();
+    recClientId = Date.now();
     startGeo();
 
     const btn = $('btn-record');
@@ -203,6 +207,7 @@ async function startRecording() {
 function stopRecording() {
     if (!isRecording) return;
     isRecording = false;
+    recDurationMs = performance.now() - recStartTs;
     clearInterval(recTimerInterval);
     stopGeo();
     try { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); } catch (e) {}
@@ -226,25 +231,44 @@ function finalizeRecording() {
         return;
     }
     const type = recMime.split(';')[0];
-    recBlob = new Blob(recChunks, { type });
+    const blob = new Blob(recChunks, { type });
     recChunks = [];
     const ext = type.includes('mp4') ? 'mp4' : 'webm';
-    const d = new Date();
+    const d = new Date(recClientId);
     const pad = (n) => String(n).padStart(2, '0');
     const slug = EXERCISES[currentExercise].name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-    recFileName = `ai-pose-${slug}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
+    const fileName = `ai-pose-${slug}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
 
+    // 1) always upload to the cloud (queued on this device until it succeeds)
+    if (window.VideoSync) {
+        VideoSync.queue(blob, {
+            clientId: recClientId, fileName, mime: type, exercise: currentExercise,
+            durationS: Math.round(recDurationMs / 1000), recordedAt: new Date(recClientId).toISOString()
+        });
+    }
+    // 2) then ask whether to keep a copy on this device
+    openRecPreview(blob, fileName, { clientId: recClientId });
+}
+
+// Show a video in the preview dialog (new recording or one loaded from the cloud)
+function openRecPreview(blob, fileName, opts = {}) {
+    recBlob = blob;
+    recFileName = fileName;
+    const type = blob.type || 'video/mp4';
     if (recObjectUrl) URL.revokeObjectURL(recObjectUrl);
-    recObjectUrl = URL.createObjectURL(recBlob);
+    recObjectUrl = URL.createObjectURL(blob);
 
     $('rec-preview').src = recObjectUrl;
     const dl = $('rec-download');
     dl.href = recObjectUrl;
-    dl.download = recFileName;
-    const sizeMb = (recBlob.size / 1048576).toFixed(1);
-    $('rec-meta').textContent = `${recFileName} · ${sizeMb} MB · ${ext.toUpperCase()}`;
+    dl.download = fileName;
+    const sizeMb = (blob.size / 1048576).toFixed(1);
+    $('rec-meta').textContent = `${fileName} · ${sizeMb} MB`;
+    recPreviewClientId = opts.clientId || null;
+    if (window.VideoSync) VideoSync.renderStatus();
 
-    const canShareFile = NativeApp.isNative || (navigator.canShare && navigator.canShare({ files: [new File([recBlob], recFileName, { type })] }));
+    let canShareFile = NativeApp.isNative;
+    try { canShareFile = canShareFile || !!(navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type })] })); } catch (e) {}
     $('rec-share').hidden = !canShareFile;
 
     $('rec-modal').hidden = false;
@@ -252,6 +276,7 @@ function finalizeRecording() {
 }
 
 window.closeRecModal = function () {
+    recPreviewClientId = null;
     $('rec-modal').hidden = true;
     document.body.classList.remove('modal-open');
     $('rec-preview').pause();

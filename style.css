@@ -2122,3 +2122,23 @@ body.workout-on .runner-actions .btn {
 [data-theme="light"] .auth-field input:focus,
 [data-theme="light"] .rec-field input:focus,
 [data-theme="light"] .pf-nums input:focus { border-color: var(--persimmon); box-shadow: 0 0 0 3px rgba(255, 92, 52, 0.15); }
+
+/* ---------- Video dialog: cloud status + "save to device?" ---------- */
+.rec-cloud { font-size: 13px; font-weight: 700; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
+.rec-cloud:empty { display: none; }
+.rec-cloud.done { color: var(--neon-green); }
+.rec-cloud.wait { color: var(--neon-orange); }
+.rec-ask { font-size: 14px; font-weight: 800; margin-top: 2px; }
+.rec-actions { flex-wrap: wrap; }
+
+/* ---------- Cloud video list ---------- */
+.video-item { display: flex; align-items: stretch; gap: 8px; padding: 0 !important; }
+.video-play {
+    flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: inherit; cursor: pointer;
+    display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; font: inherit;
+}
+.video-play .h-name i { color: var(--primary); }
+.video-del {
+    background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 0 14px; font-size: 14px;
+}
+.video-del:hover { color: #FF6B60; }
