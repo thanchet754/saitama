@@ -263,7 +263,18 @@
             </div>
 
             <!-- Full-screen workout: exercise name + time -->
-            <div class="ws-top"><span class="ws-chip"><span id="ws-ex-name">Squat</span> · <span id="ws-time">00:00</span></span></div>
+            <div class="ws-top"><span class="ws-chip"><span id="ws-ex-name">Squat</span> · <span id="ws-goal">15 rep</span></span></div>
+
+            <!-- Get ready: nothing is counted or recorded until BẮT ĐẦU -->
+            <div id="ws-ready" class="ws-ready" hidden>
+                <div class="ws-ready-idle">
+                    <p class="ws-ready-title">Vào vị trí trước camera</p>
+                    <p id="ws-ready-goal" class="ws-ready-goal"></p>
+                    <button class="ws-ready-btn" onclick="beginTraining()"><i class="fa-solid fa-play"></i> BẮT ĐẦU</button>
+                    <p class="ws-ready-note"><i class="fa-solid fa-circle-dot"></i> Bắt đầu quay video khi bấm</p>
+                </div>
+                <div id="ws-ready-num" class="ws-ready-num">3</div>
+            </div>
 
             <!-- Real-time HUD elements floating on Canvas -->
             <div id="stage-hud" class="stage-hud" style="display: none;">
@@ -344,6 +355,16 @@
                 <button class="btn btn-primary" onclick="closeRunnerSummary()">Tuyệt vời</button>
             </div>
         </section>
+
+        <!-- Rep goal for free training (counted down while training) -->
+        <div class="goal-row" aria-label="Mục tiêu">
+            <span class="goal-label"><i class="fa-solid fa-bullseye"></i> Mục tiêu</span>
+            <div class="goal-stepper">
+                <button onclick="changeGoal(-1)" aria-label="Giảm"><i class="fa-solid fa-minus"></i></button>
+                <span><b id="goal-val">15</b> <span id="goal-unit">rep</span></span>
+                <button onclick="changeGoal(1)" aria-label="Tăng"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
 
         <!-- Main Action Controls -->
         <section class="controls-panel">

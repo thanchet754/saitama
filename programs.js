@@ -120,7 +120,12 @@ function targetFor(p, ex, goalBoost = 1) {
     return isHold(ex) ? Math.max(15, Math.round(v / 5) * 5) : Math.max(5, v);
 }
 
-const workSeconds = (ex, target) => (isHold(ex) ? target : target * 3);
+// rough seconds per rep, used to turn "45 s of jumping jacks" into a rep goal
+const CADENCE = { JUMPING_JACK: 1.2, HIGH_KNEES: 0.8, MOUNTAIN_CLIMBER: 0.8, SQUAT: 2.2, LUNGE: 2.6, PUSHUP: 2.5,
+    KNEE_PUSHUP: 2.3, SITUP: 2.5, GLUTE_BRIDGE: 2.5, LEG_RAISE: 3 };
+const secPerRep = (ex) => CADENCE[ex] || 3;
+const workSeconds = (ex, target) => (isHold(ex) ? target : target * secPerRep(ex));
+const repsIn = (ex, sec) => (isHold(ex) ? sec : Math.max(5, Math.round(sec / secPerRep(ex))));
 
 function estimateKcal(steps, weight) {
     let kcal = 0;
@@ -146,7 +151,7 @@ function buildDailyPlan(p, date = new Date()) {
 
     // Warm-up
     const warm = pool.includes('JUMPING_JACK') ? 'JUMPING_JACK' : (EXERCISE_PLAN.JUMPING_JACK && bodyStats(p).bmi < 27 && p.level !== 'beginner') ? 'JUMPING_JACK' : 'SQUAT';
-    steps.push({ kind: 'work', ex: warm, mode: 'time', seconds: 45, label: 'Khởi động' });
+    steps.push({ kind: 'work', ex: warm, mode: 'reps', target: repsIn(warm, 45), label: 'Khởi động' });
     steps.push({ kind: 'rest', seconds: 15 });
 
     // Main blocks: cycle through exercises while the next block still fits the time budget
@@ -171,7 +176,7 @@ function buildDailyPlan(p, date = new Date()) {
     // Fat-loss finisher
     if (finisher) {
         const fin = availableExercises(p, ['CARDIO', 'LEGS'], rnd).find(k => !isHold(k)) || 'SQUAT';
-        steps.push({ kind: 'work', ex: fin, mode: 'time', seconds: 40, label: 'Về đích đốt mỡ' });
+        steps.push({ kind: 'work', ex: fin, mode: 'reps', target: repsIn(fin, 40), label: 'Về đích đốt mỡ' });
     }
     if (steps[steps.length - 1].kind === 'rest') steps.pop();
 
@@ -198,7 +203,7 @@ function buildHiitPlan(p, minutes) {
     let i = 0;
     while (planSeconds(steps) + work <= total && i < 200) {
         const ex = pool[i % pool.length];
-        steps.push({ kind: 'work', ex, mode: 'time', seconds: work, round: Math.floor(i / pool.length) + 1 });
+        steps.push({ kind: 'work', ex, mode: 'reps', target: repsIn(ex, work), round: Math.floor(i / pool.length) + 1 });
         steps.push({ kind: 'rest', seconds: rest });
         i++;
     }
@@ -370,14 +375,15 @@ function stepLabel(s) {
     const ex = EXERCISES[s.ex];
     if (s.mode === 'time') return `${s.label ? s.label + ': ' : ''}${ex.name} · ${s.seconds} giây`;
     const unit = unitOf(s.ex);
-    return `${ex.name} · ${s.target} ${unit}${s.sets ? ` × ${s.sets} hiệp` : ''}`;
+    return `${s.label ? s.label + ': ' : ''}${ex.name} · ${s.target} ${unit}${s.sets ? ` × ${s.sets} hiệp` : ''}`;
 }
 
 function planListHtml(plan) {
     const seen = new Set();
     return plan.steps.filter(s => s.kind === 'work').filter(s => {
-        const k = s.ex + (s.mode === 'time' ? 't' + (s.label || s.round || '') : '');
-        if (s.mode !== 'time' && seen.has(k)) return false;
+        const special = s.mode === 'time' || s.label || s.round;
+        const k = s.ex + (special ? 't' + (s.label || s.round || '') : '');
+        if (!special && seen.has(k)) return false;
         seen.add(k);
         return true;
     }).map(s => `<li><i class="fa-solid ${EXERCISES[s.ex].icon}"></i> ${stepLabel(s)} <small>${groupOf(s.ex)}</small></li>`).join('');
@@ -396,6 +402,7 @@ function renderProgramPanel() {
         $('hiit-card').hidden = true;
         return;
     }
+    if (typeof renderGoal === 'function') renderGoal(); // default goals follow level / goal
     const st = bodyStats(profile);
     $('profile-strip').innerHTML = `
         <div class="ps-stats">
@@ -427,7 +434,7 @@ function renderProgramPanel() {
         <div class="hc-head"><h3><i class="fa-solid fa-fire-flame-curved"></i> Đốt mỡ nhanh (HIIT)</h3>
             ${doneToday('hiit') ? '<span class="tc-done"><i class="fa-solid fa-circle-check"></i> Hôm nay</span>' : ''}</div>
         <div class="hc-options">${HIIT_OPTIONS.map(m => `<button class="${m === hiitMinutes ? 'active' : ''}" onclick="selectHiit(${m})">${m} phút</button>`).join('')}</div>
-        <p class="hc-desc">${hiit.work}s tập / ${hiit.rest}s nghỉ · ~<b>${hiit.kcal} kcal</b></p>
+        <p class="hc-desc">~${hiit.work}s mỗi bài / ${hiit.rest}s nghỉ · ~<b>${hiit.kcal} kcal</b></p>
         <details class="tc-list"><summary>Xem các bài</summary><ul>${planListHtml(hiit)}</ul></details>
         <button class="btn btn-secondary tc-start" onclick="startHiitPlan()"><i class="fa-solid fa-bolt"></i> <span>BẮT ĐẦU ${hiitMinutes} PHÚT</span></button>`;
 }
@@ -461,6 +468,7 @@ const Runner = {
         setMode('camera');
         if (!isCameraActive) await startCamera();
         if (!isCameraActive) { this.stop(true); return; }
+        armTraining(false);
         clearInterval(this.timer);
         this.timer = setInterval(() => this.tick(), 250);
         this.next();
@@ -611,8 +619,9 @@ const Runner = {
                 $('runner-count').textContent = `${left}s`;
                 $('runner-sub').textContent = `Làm liên tục · đã được ${this.progress()} ${unit}`;
             } else {
-                $('runner-count').textContent = `${this.progress()}/${s.target}`;
-                $('runner-sub').textContent = `${s.sets ? `Hiệp ${s.set}/${s.sets} · ` : ''}Mục tiêu ${s.target} ${unit}`;
+                const left = Math.max(0, s.target - this.progress());
+                $('runner-count').textContent = left > 0 ? left : '✓';
+                $('runner-sub').textContent = `${s.sets ? `Hiệp ${s.set}/${s.sets} · ` : ''}còn ${left}/${s.target} ${unit}`;
             }
         } else {
             $('runner-count').textContent = s.kind === 'rest' ? `${left}s` : '...';

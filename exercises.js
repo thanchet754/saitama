@@ -379,7 +379,7 @@ function updateGauge(cfg, angle) {
 // Called for every frame with landmarks
 function processExercise(lm, width, height) {
     // Guided workout: don't count during rest / get-ready countdown / pause
-    if (window.Runner && Runner.isResting()) {
+    if ((window.Runner && Runner.isResting()) || !trainingArmed) {
         if (EXERCISES[currentExercise].mode === 'hold') lastHoldTs = null;
         return;
     }
@@ -442,7 +442,7 @@ function processRep(cfg, angle, activeOk) {
             updateStatsDisplay();
             triggerRepAnimation();
             playBeep(800, 0.12);
-            speakRep(repCount);
+            announceRep();
             setFeedback(`${cfg.msgs.counted} (${bestAngleInRep}°)`, 'good');
         } else {
             setFeedback(cfg.msgs.rest, 'ready');
@@ -483,10 +483,14 @@ function processHold(cfg, angle, positionOk) {
         const perfect = cfg.holdRange ? Math.abs(angle - cfg.perfect) <= 12 : angle >= cfg.perfect;
         formScores.push(perfect ? 100 : 80);
         updateStatsDisplay();
-        if (secs % 10 === 0) {
+        // seconds left: call out every 10 s and the last 3
+        const g = goalInfo();
+        const left = g ? g.target - g.done : null;
+        const callOut = left === null ? secs % 10 === 0 : (left > 0 && (left % 10 === 0 || left <= 3)) || left === 0;
+        if (callOut) {
             triggerRepAnimation();
             playBeep(800, 0.12);
-            speakRep(secs);
+            announceRep();
         }
     }
     setFeedback(`${cfg.msgs.counted} ${secs} giây`, 'good');

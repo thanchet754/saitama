@@ -181,13 +181,13 @@ window.selectExercise = function (type) {
 
     jointLabelEl.textContent = cfg.jointLabel;
     targetTextEl.textContent = `Chuẩn: ${cfg.dir === 'down' ? '<' : '>'} ${cfg.target}°`;
-    $('hud-rep-label').textContent = cfg.mode === 'hold' ? 'GIÂY' : 'REPS';
     $('ws-ex-name').textContent = cfg.name;
     renderGuide(cfg);
     updateStartButton();
     if (window.DemoUI) DemoUI.refresh();
 
     resetCounter();
+    renderGoal();
 };
 
 window.setArmMode = function (mode) {
@@ -248,6 +248,104 @@ window.toggleCamera = async function () {
         await startCamera();
     }
 };
+
+// ---------- Rep goal + countdown display ----------
+// Free training counts DOWN from a goal the user picks on the home screen;
+// guided workouts count down each step's target. Holds (plank...) count seconds.
+let trainingArmed = false;   // counting + recording only after BẮT ĐẦU
+let countdownToken = 0;
+const GOALS_KEY = 'aiPoseFitness.goals';
+const freeGoals = (() => { try { return JSON.parse(localStorage.getItem(GOALS_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+const isHoldEx = (ex) => EXERCISES[ex] && EXERCISES[ex].mode === 'hold';
+function defaultGoal(ex) {
+    try { if (typeof profile !== 'undefined' && profile && typeof targetFor === 'function') return targetFor(profile, ex); } catch (e) {}
+    return (typeof EXERCISE_PLAN !== 'undefined' && EXERCISE_PLAN[ex] && EXERCISE_PLAN[ex].base) || (isHoldEx(ex) ? 30 : 15);
+}
+const freeGoal = (ex = currentExercise) => freeGoals[ex] || defaultGoal(ex);
+
+window.changeGoal = function (delta) {
+    const ex = currentExercise, hold = isHoldEx(ex);
+    const step = hold ? 5 : (freeGoal(ex) >= 30 ? 5 : 1);
+    const v = Math.min(hold ? 600 : 300, Math.max(hold ? 5 : 1, freeGoal(ex) + delta * step));
+    freeGoals[ex] = v;
+    try { localStorage.setItem(GOALS_KEY, JSON.stringify(freeGoals)); } catch (e) {}
+    renderGoal();
+    renderRepDisplay();
+};
+
+function renderGoal() {
+    const unit = isHoldEx(currentExercise) ? 'giây' : 'rep';
+    $('goal-val').textContent = freeGoal();
+    $('goal-unit').textContent = unit;
+    $('ws-goal').textContent = `${freeGoal()} ${unit}`;
+}
+
+// what is being counted down right now
+function goalInfo() {
+    if (window.Runner && Runner.active) {
+        const s = Runner.step();
+        if (!s || s.kind !== 'work' || s.mode === 'time') return null;
+        return { target: s.target, done: Runner.progress() };
+    }
+    return { target: freeGoal(), done: repCount };
+}
+
+function renderRepDisplay() {
+    const hold = isHoldEx(currentExercise);
+    const g = goalInfo();
+    const label = $('hud-rep-label');
+    if (!g) { repNumberEl.textContent = repCount; label.textContent = hold ? 'GIÂY' : 'REP'; return; }
+    const left = g.target - g.done;
+    if (left > 0) { repNumberEl.textContent = left; label.textContent = hold ? 'GIÂY CÒN LẠI' : 'REP CÒN LẠI'; }
+    else if (left === 0) { repNumberEl.textContent = '✓'; label.textContent = 'XONG MỤC TIÊU'; }
+    else { repNumberEl.textContent = `+${-left}`; label.textContent = 'VƯỢT MỤC TIÊU'; }
+}
+
+// voice: say how many are LEFT; guided workouts announce completion themselves
+function announceRep() {
+    const g = goalInfo();
+    if (!g) { speakRep(repCount); return; }
+    const left = g.target - g.done;
+    if (left > 0) speakRep(left);
+    else if (left === 0 && !(window.Runner && Runner.active)) {
+        playBeep(1200, 0.25);
+        if (typeof speakText === 'function') speakText('Hoàn thành mục tiêu'); else speakRep('Xong');
+    }
+}
+
+// ---------- Get ready -> BẮT ĐẦU -> 3-2-1 -> count + record ----------
+function showReady() {
+    renderGoal();
+    $('ws-ready-goal').textContent = `Mục tiêu: ${freeGoal()} ${isHoldEx(currentExercise) ? 'giây' : 'rep'}`;
+    $('ws-ready').hidden = false;
+    $('ws-ready').classList.remove('counting');
+    setFeedback('Vào vị trí rồi bấm BẮT ĐẦU', 'ready');
+}
+function hideReady() { $('ws-ready').hidden = true; }
+
+async function armTraining(countdown = true) {
+    const token = ++countdownToken;
+    if (countdown) {
+        const box = $('ws-ready');
+        box.classList.add('counting');
+        for (let n = 3; n >= 1; n--) {
+            $('ws-ready-num').textContent = n;
+            playBeep(700, 0.08);
+            speakRep(n);
+            await new Promise(r => setTimeout(r, 1000));
+            if (token !== countdownToken || !isCameraActive) return;
+        }
+    }
+    hideReady();
+    if (!isCameraActive) return;
+    resetCounter();          // the session starts now
+    trainingArmed = true;
+    renderRepDisplay();
+    playBeep(1000, 0.2);
+    startTimer();
+    if (typeof startRecording === 'function') startRecording();
+}
+window.beginTraining = () => armTraining(true);
 
 // ---------- Full-screen, distraction-free workout view ----------
 function updateStartButton() {
@@ -349,10 +447,9 @@ async function startCamera() {
         playBeep(1, 0.01);
 
         requestWakeLock();
-        startTimer();
         runVideoLoop(myToken);
-        // Every workout is recorded automatically (keeps going across a camera flip)
-        if (typeof startRecording === 'function') setTimeout(() => startRecording(), 300);
+        if (trainingArmed) startTimer();                 // camera flipped mid-workout: keep going
+        else if (!(window.Runner && Runner.active)) showReady(); // wait for BẮT ĐẦU
     } catch (err) {
         console.error('Camera error:', err);
         stopStream();
@@ -376,6 +473,9 @@ function stopStream() {
 }
 
 function stopCamera() {
+    trainingArmed = false;
+    countdownToken++;
+    hideReady();
     if (typeof isRecording !== 'undefined' && isRecording) stopRecording();
     loopToken++;
     isCameraActive = false;
@@ -427,9 +527,8 @@ window.resetCounter = function () {
     formScores = [];
     resetExerciseState();
 
-    repNumberEl.textContent = '0';
+    renderRepDisplay();
     statTimeEl.textContent = '00:00';
-    $('ws-time').textContent = '00:00';
     statCalsEl.textContent = '0 kcal';
     statAccuracyEl.textContent = '--';
     gaugeFillEl.style.width = '0%';
@@ -665,7 +764,7 @@ function setFeedback(text, status = 'ready') {
 }
 
 function triggerRepAnimation() {
-    repNumberEl.textContent = repCount;
+    renderRepDisplay();
     repNumberEl.classList.remove('pop-anim');
     void repNumberEl.offsetWidth; // restart animation
     repNumberEl.classList.add('pop-anim');
@@ -678,7 +777,7 @@ function averageForm() {
 }
 
 function updateStatsDisplay() {
-    repNumberEl.textContent = repCount;
+    renderRepDisplay();
     const cals = Math.round(repCount * EXERCISES[currentExercise].kcal * 10) / 10;
     statCalsEl.textContent = `${cals} kcal`;
     const avg = averageForm();
@@ -697,7 +796,6 @@ function startTimer() {
     timerInterval = setInterval(() => {
         durationSeconds++;
         statTimeEl.textContent = formatTime(durationSeconds);
-        $('ws-time').textContent = formatTime(durationSeconds);
     }, 1000);
 }
 
