@@ -277,7 +277,7 @@ Object.assign(EXERCISES, {
     },
     HIGH_KNEES: {
         name: 'Nâng gối cao', icon: 'fa-person-running',
-        joint: 'hip', jointLabel: 'Góc hông', dir: 'down',
+        joint: 'hip', kneeLift: true, jointLabel: 'Góc hông', dir: 'down',
         top: 150, target: 105, perfect: 95, kcal: 0.1,
         restLabel: 'CHÂN XUỐNG', activeLabel: 'GỐI CAO',
         view: 'Đứng đối diện hoặc nghiêng camera, thấy toàn thân.',
@@ -293,16 +293,119 @@ Object.assign(EXERCISES, {
     }
 });
 
+
+// ---------- Dumbbell combo (standing, filmed from the front or the back) ----------
+Object.assign(EXERCISES, {
+    SQUAT_CURL: {
+        name: 'Squat gập tạ', icon: 'fa-person-arrow-down-to-line', equipment: 'dumbbell',
+        joint: 'knee', jointLabel: 'Góc gối', dir: 'down',
+        top: 160, target: 100, perfect: 90, kcal: 0.45,
+        restLabel: 'ĐỨNG (TAY XUÔI)', activeLabel: 'NGỒI (TẠ LÊN VAI)',
+        view: 'Đặt camera trước hoặc sau lưng, chéo 45°, thấy toàn thân.',
+        tip: 'Cầm 2 tạ xuôi tay. Ngồi xuống tới đùi gần song song sàn (gối < 100°) đồng thời gập tạ lên vai, đứng lên hạ tạ xuống.',
+        msgs: {
+            missing: 'Lùi lại để camera thấy hông, gối và cổ chân',
+            rest: 'Ngồi xuống và gập tạ lên vai!',
+            reached: 'Chuẩn! Đứng lên, hạ tạ xuống!',
+            deeper: 'Ngồi sâu hơn nữa!',
+            returning: 'Đứng thẳng lên hẳn!',
+            counted: 'Đẹp! +1 Squat gập tạ'
+        }
+    },
+    SUMO_TWIST: {
+        name: 'Squat sumo xoay tạ', icon: 'fa-arrows-spin', equipment: 'dumbbell',
+        joint: 'knee', jointLabel: 'Góc gối', dir: 'down',
+        top: 155, target: 110, perfect: 100, kcal: 0.45,
+        restLabel: 'ĐỨNG', activeLabel: 'NGỒI + XOAY',
+        view: 'Đặt camera trước hoặc sau lưng, thấy toàn thân và hai bàn chân.',
+        tip: 'Chân rộng hơn vai, mũi chân mở. Ngồi xuống (gối < 110°) và xoay tạ sang một bên, đứng lên rồi đổi bên.',
+        msgs: {
+            missing: 'Lùi lại để camera thấy hông, gối và cổ chân',
+            rest: 'Ngồi xuống, xoay tạ sang bên!',
+            reached: 'Tốt! Đứng lên, đổi bên!',
+            deeper: 'Hạ hông thấp hơn, gối mở ra!',
+            returning: 'Đứng thẳng lên hẳn!',
+            counted: 'Đẹp! +1 Sumo xoay'
+        }
+    },
+    BENT_ALT_RAISE: {
+        name: 'Cúi người vung tạ luân phiên', icon: 'fa-hand-back-fist', equipment: 'dumbbell',
+        joint: 'shoulder', jointLabel: 'Góc vai', dir: 'up', alternate: true, requireHinge: true,
+        top: 70, target: 130, perfect: 150, kcal: 0.25,
+        restLabel: 'TAY XUÔI', activeLabel: 'TAY VUNG CAO',
+        view: 'Đứng nghiêng hoặc quay lưng chéo với camera, thấy vai, hông và tay.',
+        tip: 'Gập hông ~45°, lưng thẳng. Vung thẳng một tay lên cao ra trước đầu (vai > 130°), hạ xuống rồi đổi tay. Mỗi lần vung = 1 rep.',
+        msgs: {
+            missing: 'Hãy để camera thấy rõ vai, khuỷu tay và hông',
+            position: 'Gập hông, nghiêng thân về trước ~45°',
+            rest: 'Vung một tay lên cao!',
+            reached: 'Cao rồi! Hạ xuống, đổi tay!',
+            deeper: 'Vung tay cao hơn, thẳng theo thân!',
+            returning: 'Hạ tay xuống hẳn!',
+            counted: 'Đẹp! +1'
+        }
+    },
+    REVERSE_FLY: {
+        name: 'Cúi người dang tạ', icon: 'fa-arrows-left-right', equipment: 'dumbbell',
+        joint: 'shoulder', jointLabel: 'Góc vai', dir: 'up', requireHinge: true,
+        top: 40, target: 75, perfect: 85, kcal: 0.25,
+        restLabel: 'TAY XUÔI', activeLabel: 'DANG NGANG',
+        view: 'Quay lưng hoặc đối diện camera, thấy rõ hai tay và hông.',
+        tip: 'Gập hông ~45°, lưng thẳng, khuỷu hơi chùng. Dang hai tạ sang ngang tới ngang vai (> 75°), siết bả vai rồi hạ chậm.',
+        msgs: {
+            missing: 'Hãy để camera thấy rõ vai, khuỷu tay và hông',
+            position: 'Gập hông, nghiêng thân về trước ~45°',
+            rest: 'Dang hai tay sang ngang!',
+            reached: 'Siết bả vai! Hạ chậm xuống!',
+            deeper: 'Dang cao hơn tới ngang vai!',
+            returning: 'Hạ tay xuống hẳn!',
+            counted: 'Đẹp! +1 Dang tạ'
+        }
+    },
+    OBLIQUE_KNEE: {
+        name: 'Gối chéo xoắn bụng', icon: 'fa-person-walking-arrow-right', equipment: 'dumbbell',
+        joint: 'hip', kneeLift: true, jointLabel: 'Góc hông', dir: 'down',
+        top: 155, target: 120, perfect: 105, kcal: 0.15,
+        restLabel: 'ĐỨNG', activeLabel: 'GỐI CHÉO LÊN',
+        view: 'Đứng đối diện hoặc quay lưng camera, thấy toàn thân.',
+        tip: 'Cầm tạ trước ngực. Kéo gối chéo lên phía khuỷu bên kia, xoắn bụng (hông < 120°), hạ xuống rồi đổi bên. Mỗi lần nâng gối = 1 rep.',
+        msgs: {
+            missing: 'Lùi lại để camera thấy vai, hông và gối',
+            rest: 'Kéo gối chéo lên!',
+            reached: 'Siết bụng! Đổi bên!',
+            deeper: 'Kéo gối cao hơn!',
+            returning: 'Hạ chân xuống!',
+            counted: '+1'
+        }
+    },
+    STANDING_CRUNCH: {
+        name: 'Gập bụng đứng', icon: 'fa-person-arrow-up-from-line', equipment: 'dumbbell',
+        joint: 'hip', kneeLift: true, jointLabel: 'Góc hông', dir: 'down',
+        top: 155, target: 115, perfect: 100, kcal: 0.15,
+        restLabel: 'TẠ TRÊN ĐẦU', activeLabel: 'GỐI CHẠM TẠ',
+        view: 'Đứng đối diện hoặc quay lưng camera, thấy toàn thân.',
+        tip: 'Giơ tạ qua đầu. Nâng một gối lên và kéo tạ xuống gặp gối (hông < 115°), duỗi người lên rồi đổi chân. Mỗi lần nâng gối = 1 rep.',
+        msgs: {
+            missing: 'Lùi lại để camera thấy vai, hông và gối',
+            rest: 'Kéo tạ xuống gặp gối!',
+            reached: 'Siết bụng! Duỗi lên, đổi chân!',
+            deeper: 'Nâng gối cao hơn!',
+            returning: 'Duỗi người, tạ lên đầu!',
+            counted: '+1'
+        }
+    }
+});
+
 // Dumbbell exercises (marked so plans can skip them for "no equipment")
 ['CURL', 'SHOULDER_PRESS', 'LATERAL_RAISE'].forEach(k => { EXERCISES[k].equipment = 'dumbbell'; });
 
 // Muscle groups, plan defaults (reps or seconds per set) and intensity (MET)
 const MUSCLE_GROUPS = [
-    { key: 'LEGS',     name: 'Chân & Mông',      icon: 'fa-person-arrow-down-to-line', items: ['SQUAT', 'LUNGE', 'GLUTE_BRIDGE', 'WALL_SIT'] },
+    { key: 'LEGS',     name: 'Chân & Mông',      icon: 'fa-person-arrow-down-to-line', items: ['SQUAT', 'LUNGE', 'GLUTE_BRIDGE', 'WALL_SIT', 'SQUAT_CURL', 'SUMO_TWIST'] },
     { key: 'CHEST',    name: 'Ngực',             icon: 'fa-angles-down',               items: ['PUSHUP', 'KNEE_PUSHUP'] },
-    { key: 'SHOULDER', name: 'Vai',              icon: 'fa-angles-up',                 items: ['SHOULDER_PRESS', 'LATERAL_RAISE', 'FRONT_RAISE'] },
-    { key: 'ARMS',     name: 'Tay trước & sau',  icon: 'fa-dumbbell',                  items: ['CURL', 'TRICEP_EXT'] },
-    { key: 'CORE',     name: 'Bụng & Core',      icon: 'fa-shield-halved',             items: ['SITUP', 'LEG_RAISE', 'PLANK', 'MOUNTAIN_CLIMBER'] },
+    { key: 'SHOULDER', name: 'Vai & Lưng',       icon: 'fa-angles-up',                 items: ['SHOULDER_PRESS', 'LATERAL_RAISE', 'FRONT_RAISE', 'REVERSE_FLY'] },
+    { key: 'ARMS',     name: 'Tay trước & sau',  icon: 'fa-dumbbell',                  items: ['CURL', 'TRICEP_EXT', 'BENT_ALT_RAISE'] },
+    { key: 'CORE',     name: 'Bụng & Core',      icon: 'fa-shield-halved',             items: ['SITUP', 'LEG_RAISE', 'PLANK', 'MOUNTAIN_CLIMBER', 'OBLIQUE_KNEE', 'STANDING_CRUNCH'] },
     { key: 'CARDIO',   name: 'Cardio',           icon: 'fa-heart-pulse',               items: ['JUMPING_JACK', 'HIGH_KNEES', 'MOUNTAIN_CLIMBER'] }
 ];
 
@@ -323,7 +426,13 @@ const EXERCISE_PLAN = {
     PLANK:            { base: 30, met: 3.8, impact: 'low' },
     MOUNTAIN_CLIMBER: { base: 20, met: 8.0, impact: 'high' },
     JUMPING_JACK:     { base: 30, met: 8.0, impact: 'high' },
-    HIGH_KNEES:       { base: 30, met: 8.0, impact: 'high' }
+    HIGH_KNEES:       { base: 30, met: 8.0, impact: 'high' },
+    SQUAT_CURL:       { base: 15, met: 5.5, impact: 'low' },
+    SUMO_TWIST:       { base: 15, met: 5.0, impact: 'low' },
+    BENT_ALT_RAISE:   { base: 20, met: 3.8, impact: 'low' },
+    REVERSE_FLY:      { base: 12, met: 3.5, impact: 'low' },
+    OBLIQUE_KNEE:     { base: 20, met: 4.0, impact: 'low' },
+    STANDING_CRUNCH:  { base: 20, met: 4.0, impact: 'low' }
 };
 
 const groupOf = (type) => (MUSCLE_GROUPS.find(g => g.items.includes(type)) || {}).name || '';
@@ -361,6 +470,36 @@ function bodyTilt(lm, width, height, ref) {
     return Math.atan2(dy, dx) * 180 / Math.PI;
 }
 
+// Bent forward at the hips? Side view: the torso line tilts. Front / back view: the lean
+// points at the camera, so the torso instead looks SHORT compared with the thighs.
+function isHinged(lm, width, height) {
+    const tilt = bodyTilt(lm, width, height, 'torso');
+    if (tilt !== null && tilt < 72) return true;
+    const len = (a, b) => (lm[a] && lm[b]) ? Math.hypot((lm[a].x - lm[b].x) * width, (lm[a].y - lm[b].y) * height) : 0;
+    const torso = (len(11, 23) + len(12, 24)) / 2;
+    const thigh = (len(23, 25) + len(24, 26)) / 2;
+    return thigh > 0 && torso / thigh < 0.85;
+}
+
+// Knee raises: how high the knee comes up, as an "equivalent hip angle" (180 = leg down,
+// 90 = thigh level with the hip). Works from the side AND from the front / back, where the
+// thigh points at the camera and the plain shoulder-hip-knee angle hardly changes.
+function kneeLiftSide(lm, width, height) {
+    const len = (a, b) => Math.hypot((a.x - b.x) * width, (a.y - b.y) * height);
+    const sides = [[11, 23, 25], [12, 24, 26]].map(idx => {
+        const pts = idx.map(i => lm[i]);
+        const [sh, hip, knee] = pts;
+        const vis = pts.reduce((t, p) => t + (p?.visibility ?? 0), 0) / 3;
+        if (!sh || !hip || !knee || vis < VIS_THRESHOLD) return null;
+        const ref = Math.max(len(sh, hip) * 0.9, len(hip, knee));
+        const dy = (knee.y - hip.y) * height;
+        const lift = Math.acos(Math.max(-1, Math.min(1, dy / ref))) * 180 / Math.PI;
+        return { pts, vertex: hip, vis, angle: Math.round(180 - lift), ok: true };
+    }).filter(Boolean);
+    if (!sides.length) return null;
+    return sides.sort((a, b) => a.angle - b.angle)[0]; // the raised leg
+}
+
 function gaugePercent(cfg, angle) {
     const start = cfg.dir === 'down' ? cfg.top + 10 : cfg.top - 10;
     const pct = (cfg.dir === 'down' ? start - angle : angle - start) / Math.abs(cfg.target - start) * 100;
@@ -385,7 +524,8 @@ function processExercise(lm, width, height) {
     }
     const cfg = EXERCISES[currentExercise];
     const [leftIdx, rightIdx] = JOINTS[cfg.joint];
-    const side = pickSide(lm, leftIdx, rightIdx, cfg.arm ? selectedArmMode : 'BOTH');
+    const side = cfg.kneeLift ? kneeLiftSide(lm, width, height)
+        : pickSide(lm, leftIdx, rightIdx, cfg.arm ? selectedArmMode : (cfg.alternate && cfg.dir === 'up' ? 'MAX' : 'BOTH'));
     if (!side) {
         setFeedback(cfg.msgs.missing, 'ready');
         if (cfg.mode === 'hold') lastHoldTs = null;
@@ -399,6 +539,7 @@ function processExercise(lm, width, height) {
         const tilt = bodyTilt(lm, width, height, cfg.requireHorizontal);
         positionOk = tilt !== null && tilt < 40;
     }
+    if (cfg.requireHinge) positionOk = isHinged(lm, width, height); // bent-over moves
     if (cfg.requireElbowUp) {
         const [shoulder, elbow] = side.pts;
         positionOk = elbow.y < shoulder.y + 0.02;

@@ -24,7 +24,13 @@ const DEMO_STEPS = {
     SITUP: ['Nằm ngửa, co gối, bàn chân đặt sàn', 'Siết bụng cuộn thân trên lên', 'Hạ chậm xuống, không giật cổ'],
     LEG_RAISE: ['Nằm ngửa, tay đặt dọc thân', 'Giữ chân thẳng, nâng lên tới ~90°', 'Hạ chậm, lưng dưới áp sàn'],
     GLUTE_BRIDGE: ['Nằm ngửa, co gối, bàn chân gần mông', 'Siết mông đẩy hông lên thành đường thẳng', 'Hạ chậm xuống rồi lặp lại'],
-    WALL_SIT: ['Tựa lưng vào tường', 'Trượt xuống tới khi gối gập ~90°', 'Giữ nguyên, thở đều']
+    WALL_SIT: ['Tựa lưng vào tường', 'Trượt xuống tới khi gối gập ~90°', 'Giữ nguyên, thở đều'],
+    SQUAT_CURL: ['Cầm 2 tạ xuôi tay, chân rộng bằng vai', 'Ngồi xuống đồng thời gập tạ lên vai', 'Đứng lên, hạ tạ xuống'],
+    SUMO_TWIST: ['Chân rộng hơn vai, mũi chân mở', 'Ngồi xuống, xoay tạ sang một bên', 'Đứng lên rồi xoay sang bên kia'],
+    BENT_ALT_RAISE: ['Gập hông ~45°, lưng thẳng, tạ xuôi', 'Vung thẳng một tay lên cao theo thân', 'Hạ xuống rồi đổi tay, nhịp đều'],
+    REVERSE_FLY: ['Gập hông ~45°, khuỷu hơi chùng', 'Dang hai tạ sang ngang, siết bả vai', 'Hạ chậm, không vung người'],
+    OBLIQUE_KNEE: ['Cầm tạ trước ngực, đứng thẳng', 'Kéo gối chéo lên, xoắn bụng về phía gối', 'Hạ xuống rồi đổi bên'],
+    STANDING_CRUNCH: ['Giơ tạ qua đầu', 'Nâng gối, kéo tạ xuống gặp gối, siết bụng', 'Duỗi người lên rồi đổi chân']
 };
 
 // ---- animations ----
@@ -120,6 +126,50 @@ const DEMOS = {
         period: 2.4, pitch: -90, flat: 'LR', supports: ['shoulder', 'heel'], cam: { az: 75, el: 16 },
         frames: [{ both: { hf: 72, k: 118, sa: 8 } }, { both: { hf: 8, k: 92, sa: 8 } }]
     },
+    SQUAT_CURL: {
+        period: 2.6, flat: 'LR', anchor: 'heel', dumbbell: true, cam: { az: 40 },
+        frames: [{ both: { sa: 6, e: 5 } }, { pitch: 32, both: { hf: 115, k: 112, sf: 25, e: 140 } }]
+    },
+    SUMO_TWIST: {
+        period: 3.2, flat: 'LR', anchor: 'heel', dumbbell: true, cam: { az: 20 },
+        frames: [
+            { both: { ha: 24, sa: 8 } },
+            { pitch: 12, twist: 35, both: { hf: 95, k: 100, ha: 32, sf: 75, e: 10 } },
+            { both: { ha: 24, sa: 8 } },
+            { pitch: 12, twist: -35, both: { hf: 95, k: 100, ha: 32, sf: 75, e: 10 } }
+        ]
+    },
+    BENT_ALT_RAISE: {
+        period: 2.2, flat: 'LR', dumbbell: true, cam: { az: 70, el: 12 },
+        frames: [
+            { pitch: 45, L: { hf: 45, k: 12, sf: 170 }, R: { hf: 45, k: 12, sf: 45 } },
+            { pitch: 45, both: { hf: 45, k: 12, sf: 45 } },
+            { pitch: 45, R: { hf: 45, k: 12, sf: 170 }, L: { hf: 45, k: 12, sf: 45 } },
+            { pitch: 45, both: { hf: 45, k: 12, sf: 45 } }
+        ]
+    },
+    REVERSE_FLY: {
+        period: 2.4, flat: 'LR', dumbbell: true, cam: { az: 180, el: 22 },
+        frames: [{ pitch: 45, both: { hf: 45, k: 12, sf: 45, e: 10 } }, { pitch: 45, both: { hf: 45, k: 12, sf: 45, sa: 80, e: 15 } }]
+    },
+    OBLIQUE_KNEE: {
+        period: 2.4, flat: 'LR', dumbbell: true, cam: { az: 25 },
+        frames: [
+            { both: { sf: 50, sa: 20, e: 120 } },
+            { spine: 12, twist: -25, both: { sf: 50, sa: 20, e: 120 }, L: { hf: 90, ha: 25, k: 100 } },
+            { both: { sf: 50, sa: 20, e: 120 } },
+            { spine: 12, twist: 25, both: { sf: 50, sa: 20, e: 120 }, R: { hf: 90, ha: 25, k: 100 } }
+        ]
+    },
+    STANDING_CRUNCH: {
+        period: 2.4, flat: 'LR', dumbbell: true, cam: { az: 35 },
+        frames: [
+            { both: { sf: 168, sa: 8, e: 30 } },
+            { spine: 25, both: { sf: 55, sa: 15, e: 95 }, L: { hf: 95, k: 100 } },
+            { both: { sf: 168, sa: 8, e: 30 } },
+            { spine: 25, both: { sf: 55, sa: 15, e: 95 }, R: { hf: 95, k: 100 } }
+        ]
+    },
     WALL_SIT: {
         period: 3, flat: 'LR', wall: true, cam: { az: 70 },
         frames: [
@@ -129,11 +179,11 @@ const DEMOS = {
     }
 };
 
-const POSE_KEYS = ['pitch', 'spine', 'neck', 'lift'];
+const POSE_KEYS = ['pitch', 'spine', 'neck', 'lift', 'twist'];
 const SIDE_KEYS = ['sf', 'sa', 'st', 'e', 'hf', 'ha', 'k'];
 
 function normalizePose(f, basePitch) {
-    const p = { pitch: basePitch || 0, spine: 0, neck: 0, lift: 0 };
+    const p = { pitch: basePitch || 0, spine: 0, neck: 0, lift: 0, twist: 0 };
     POSE_KEYS.forEach(k => { if (f[k] !== undefined) p[k] = f[k]; });
     ['L', 'R'].forEach(s => SIDE_KEYS.forEach(k => {
         const v = (f[s] && f[s][k] !== undefined) ? f[s][k] : (f.both && f.both[k] !== undefined ? f.both[k] : 0);
@@ -296,7 +346,7 @@ const ExerciseDemo = (() => {
     function applyPose(p) {
         const root = rig.root;
         root.rotation.set(rad(p.pitch), 0, 0, 'YXZ');
-        rig.spine.rotation.x = rad(p.spine);
+        rig.spine.rotation.set(rad(p.spine), rad(p.twist || 0), 0);
         rig.neck.rotation.x = rad(p.neck);
         ['L', 'R'].forEach(side => {
             const s = side === 'L' ? 1 : -1, S = rig[side];

@@ -745,6 +745,7 @@ function pickSide(lm, leftIdx, rightIdx, mode) {
 
     if (mode === 'LEFT') return left.ok ? left : null;
     if (mode === 'RIGHT') return right.ok ? right : null;
+    if (mode === 'MAX' && left.ok && right.ok) return left.angle >= right.angle ? left : right;
     if (left.ok && right.ok) return left.angle <= right.angle ? left : right;
     if (left.ok) return left;
     if (right.ok) return right;

@@ -400,6 +400,7 @@ function renderProgramPanel() {
             <button class="btn btn-primary" onclick="openProfileModal(true)">Tạo hồ sơ</button>`;
         $('today-card').hidden = true;
         $('hiit-card').hidden = true;
+        $('combo-card').hidden = true;
         return;
     }
     if (typeof renderGoal === 'function') renderGoal(); // default goals follow level / goal
@@ -428,6 +429,15 @@ function renderProgramPanel() {
         <details class="tc-list"><summary>Xem các bài</summary><ul>${planListHtml(plan)}</ul></details>
         <button class="btn btn-primary tc-start" onclick="startDailyPlan()"><i class="fa-solid fa-play"></i> <span>${done ? 'TẬP LẠI' : 'BẮT ĐẦU BUỔI TẬP'}</span></button>`;
 
+    const combo = buildComboPlan(profile);
+    $('combo-card').hidden = false;
+    $('combo-card').innerHTML = `
+        <div class="hc-head"><h3><i class="fa-solid fa-dumbbell"></i> Combo tạ đơn 6 bài</h3>
+            ${doneToday('combo') ? '<span class="tc-done"><i class="fa-solid fa-circle-check"></i> Hôm nay</span>' : ''}</div>
+        <p class="hc-desc">${combo.reps} rep mỗi bài · mông, tay, lưng, bụng · ~${fmtMin(combo.seconds)} · ~<b>${combo.kcal} kcal</b> · cần 1 cặp tạ</p>
+        <details class="tc-list"><summary>Xem các bài</summary><ul>${planListHtml(combo)}</ul></details>
+        <button class="btn btn-secondary tc-start" onclick="startComboPlan()"><i class="fa-solid fa-dumbbell"></i> <span>BẮT ĐẦU COMBO</span></button>`;
+
     $('hiit-card').hidden = false;
     const hiit = buildHiitPlan(profile, hiitMinutes);
     $('hiit-card').innerHTML = `
@@ -438,6 +448,22 @@ function renderProgramPanel() {
         <details class="tc-list"><summary>Xem các bài</summary><ul>${planListHtml(hiit)}</ul></details>
         <button class="btn btn-secondary tc-start" onclick="startHiitPlan()"><i class="fa-solid fa-bolt"></i> <span>BẮT ĐẦU ${hiitMinutes} PHÚT</span></button>`;
 }
+
+// "Combo tạ đơn": the six standing dumbbell moves back to back (reel style, up to 50 each)
+const COMBO_DB = ['SQUAT_CURL', 'SUMO_TWIST', 'BENT_ALT_RAISE', 'REVERSE_FLY', 'OBLIQUE_KNEE', 'STANDING_CRUNCH'];
+function buildComboPlan(p) {
+    const reps = { beginner: 20, intermediate: 35, advanced: 50 }[p.level] || 35;
+    const steps = [];
+    COMBO_DB.forEach((ex, i) => {
+        steps.push({ kind: 'work', ex, mode: 'reps', target: reps });
+        if (i < COMBO_DB.length - 1) steps.push({ kind: 'rest', seconds: 30 });
+    });
+    return {
+        id: 'combo-db-' + todayKey(), kind: 'combo', title: 'Combo tạ đơn 6 bài', dayName: 'Combo',
+        steps, seconds: planSeconds(steps), kcal: estimateKcal(steps, p.weight_kg), exCount: COMBO_DB.length, reps
+    };
+}
+window.startComboPlan = function () { if (profile) Runner.start(buildComboPlan(profile)); };
 
 window.selectHiit = function (m) { hiitMinutes = m; renderProgramPanel(); };
 window.startDailyPlan = function () { if (profile) Runner.start(buildDailyPlan(profile)); };

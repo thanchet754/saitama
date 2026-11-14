@@ -8,7 +8,7 @@ Bản chạy thật: https://saitama-liart.vercel.app
 
 ## Tính năng
 
-- **17 bài tập, 6 nhóm cơ** (Chân & Mông, Ngực, Vai, Tay, Bụng & Core, Cardio). Đếm rep / đếm giây bằng góc khớp, có kiểm tra tư thế (thân nằm ngang, cổ tay trên vai...). Ngưỡng từng bài trong `exercises.js`.
+- **23 bài tập, 6 nhóm cơ** (Chân & Mông, Ngực, Vai & Lưng, Tay, Bụng & Core, Cardio), gồm 6 bài tạ đơn đứng + giáo án **Combo tạ đơn 6 bài**. Đếm rep / đếm giây bằng góc khớp, có kiểm tra tư thế (thân nằm ngang, cổ tay trên vai...). Ngưỡng từng bài trong `exercises.js`.
 - **Mô phỏng 3D** từng động tác (hình người three.js, xoay được) + 3 bước hướng dẫn; hiện ở trang chủ, màn hình nghỉ của giáo án và nút "Động tác mẫu" khi tập (`demo3d.js`).
 - **Hồ sơ ban đầu** (giới tính, tuổi, chiều cao, cân nặng, mục tiêu, trình độ, thời gian, có tạ): BMI chuẩn châu Á, cân nặng lý tưởng, calo nên ăn.
 - **Giáo án hôm nay** theo lịch tuần, **HIIT** 7 / 15 / 20 / 30 phút, **tập có hướng dẫn** (tự chuyển bài, đếm ngược, nghỉ, giọng đọc), chuỗi ngày tập 🔥 (`programs.js`).
