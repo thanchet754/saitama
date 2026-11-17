@@ -182,6 +182,7 @@ window.selectExercise = function (type) {
     jointLabelEl.textContent = cfg.jointLabel;
     targetTextEl.textContent = `Chuẩn: ${cfg.dir === 'down' ? '<' : '>'} ${cfg.target}°`;
     $('ws-ex-name').textContent = cfg.name;
+    $('ws-muscles').innerHTML = muscleChipsHTML(currentExercise, false);
     renderGuide(cfg);
     updateStartButton();
     if (window.DemoUI) DemoUI.refresh();
@@ -533,6 +534,7 @@ window.resetCounter = function () {
     statAccuracyEl.textContent = '--';
     gaugeFillEl.style.width = '0%';
     angleValEl.textContent = '--°';
+    if (window.RepGauge) RepGauge.reset();
     stageBadgeEl.textContent = EXERCISES[currentExercise].restLabel;
 };
 
@@ -631,6 +633,7 @@ function renderPoseFrame(results) {
     }
 
     const lm = results.poseLandmarks;
+    drawMuscleGlow(canvasCtx, lm, width, height, currentExercise, trainingArmed ? RepGauge.effort() : 0);
     drawNeonSkeleton(canvasCtx, lm, width, height);
 
     processExercise(lm, width, height);
@@ -647,36 +650,33 @@ const SKELETON_PAIRS = [
 ];
 const SKELETON_JOINTS = [...new Set(SKELETON_PAIRS.flat())];
 
+// Plain white skeleton with a dark outline: readable on any background.
+// The joint being measured is drawn on top in colour (drawTrackedJoint, muscles.js).
 function drawNeonSkeleton(ctx, lm, width, height) {
     ctx.save();
-    ctx.lineWidth = 4;
     ctx.lineCap = 'round';
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#E9F056';
-    ctx.strokeStyle = '#E9F056';
-
+    const segs = [];
     SKELETON_PAIRS.forEach(([i, j]) => {
-        if (isVisible(lm[i]) && isVisible(lm[j])) {
-            const a = toPx(lm[i], width, height);
-            const b = toPx(lm[j], width, height);
-            ctx.beginPath();
-            ctx.moveTo(a.x, a.y);
-            ctx.lineTo(b.x, b.y);
-            ctx.stroke();
-        }
+        if (isVisible(lm[i]) && isVisible(lm[j])) segs.push([toPx(lm[i], width, height), toPx(lm[j], width, height)]);
+    });
+    [[7, 'rgba(0, 0, 0, 0.45)'], [3.5, 'rgba(255, 255, 255, 0.92)']].forEach(([w, c]) => {
+        ctx.lineWidth = w;
+        ctx.strokeStyle = c;
+        ctx.beginPath();
+        segs.forEach(([a, b]) => { ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); });
+        ctx.stroke();
     });
 
     SKELETON_JOINTS.forEach(idx => {
         if (!isVisible(lm[idx])) return;
         const { x, y } = toPx(lm[idx], width, height);
         ctx.beginPath();
-        ctx.arc(x, y, 6, 0, 2 * Math.PI);
-        ctx.fillStyle = '#E9F056';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
         ctx.fillStyle = '#FFFFFF';
         ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.stroke();
     });
     ctx.restore();
 }

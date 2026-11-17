@@ -2232,3 +2232,110 @@ body.runner-on .goal-row { display: none; }
 .ws-ready.counting .ws-ready-idle { display: none; }
 .ws-ready.counting .ws-ready-num { display: block; }
 body.workout-on #btn-reset-counter { display: none; }
+
+/* ================= Muscles worked + form ruler ================= */
+.mchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.mchips:empty { display: none; }
+.mchip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11.5px; font-weight: 800; letter-spacing: 0.2px;
+    padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+}
+.mchip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.mchip-p { background: rgba(255, 92, 52, 0.16); color: #FF5C34; border: 1px solid rgba(255, 92, 52, 0.5); }
+.mchip-s { background: rgba(242, 166, 90, 0.12); color: #E7A15C; border: 1px solid rgba(242, 166, 90, 0.35); }
+
+body.workout-on .ws-top { flex-direction: column; align-items: center; gap: 6px; }
+.ws-muscles { justify-content: center; margin: 0; }
+.ws-muscles .mchip-p { background: rgba(255, 92, 52, 0.85); color: #FFF; border-color: transparent; box-shadow: 0 2px 10px rgba(255, 92, 52, 0.45); }
+body.workout-on .rec-indicator { top: calc(env(safe-area-inset-top) + 94px); }
+
+/* legend inside the 3D view */
+.demo-legend {
+    position: absolute; left: 8px; top: 8px; z-index: 1; pointer-events: none;
+    display: flex; flex-direction: column; gap: 3px;
+    font-size: 10.5px; font-weight: 800; line-height: 1.25;
+    background: rgba(28, 16, 22, 0.55); color: #FFF; padding: 6px 9px; border-radius: 10px;
+    max-width: calc(100% - 16px);
+}
+.demo-legend span { display: flex; align-items: center; gap: 6px; }
+.demo-legend i { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+.demo-legend .lp i { background: #FF5C34; box-shadow: 0 0 6px #FF5C34; }
+.demo-legend .ls i { background: #F2A65A; }
+
+/* vertical ruler on the right of the camera */
+.rep-gauge { display: none; }
+body.workout-on .rep-gauge:not([hidden]) {
+    display: block;
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-42%);
+    height: min(42vh, 340px);
+    width: 22px;
+    z-index: 11;
+    pointer-events: none;
+    --rg: #FF5C34;
+}
+body.workout-on .rep-gauge[data-state="good"] { --rg: #3DDC84; }
+body.workout-on .rep-gauge[data-state="bad"] { --rg: #A7A1A4; }
+.rg-line.near span, .rg-rest span.near { opacity: 0; }
+.rg-hint {
+    position: absolute; right: -6px; bottom: calc(100% + 14px);
+    white-space: nowrap; font-size: 12px; font-weight: 900; letter-spacing: 0.3px;
+    color: #FFF; background: var(--rg); padding: 6px 10px; border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+    transition: background 0.15s;
+}
+.rep-gauge[data-state="good"] .rg-hint { color: #10261A; }
+.rg-track {
+    position: relative; width: 100%; height: 100%;
+    border-radius: 11px;
+    background: rgba(28, 16, 22, 0.45);
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.4);
+    overflow: visible;
+}
+.rg-zone { position: absolute; left: 0; right: 0; background: rgba(61, 220, 132, 0.4); border-radius: 9px 9px 0 0; }
+.rg-rest {
+    position: absolute; left: 0; right: 0; bottom: 0; border-radius: 0 0 9px 9px;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,0.35) 0 4px, transparent 4px 8px);
+}
+.rg-rest span, .rg-line span {
+    position: absolute; right: calc(100% + 10px); top: 50%; transform: translateY(-50%);
+    font-size: 10px; font-weight: 900; white-space: nowrap; color: #FFF;
+    background: rgba(28, 16, 22, 0.7); padding: 2px 6px; border-radius: 6px;
+}
+.rg-fill {
+    position: absolute; left: 2px; right: 2px; bottom: 2px; max-height: calc(100% - 4px);
+    border-radius: 8px; background: var(--rg);
+    box-shadow: 0 0 14px var(--rg);
+    transition: height 0.08s linear, background 0.15s;
+}
+.rg-line { position: absolute; left: -9px; right: -9px; height: 0; }
+.rg-line::before { content: ''; position: absolute; left: 0; right: 0; top: -2px; height: 4px; border-radius: 2px; }
+.rg-goal::before { background: #3DDC84; box-shadow: 0 0 8px #3DDC84; }
+.rg-goal span { color: #3DDC84; }
+.rg-perfect::before { background: repeating-linear-gradient(90deg, #E9F056 0 5px, transparent 5px 8px); }
+.rg-perfect span { color: #E9F056; }
+.rg-perfect[hidden] { display: none; }
+.rg-thumb {
+    position: absolute; left: 50%; width: 30px; height: 30px; margin-left: -15px; margin-bottom: -15px;
+    border-radius: 50%; background: #FFF; border: 5px solid var(--rg);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+    transition: bottom 0.08s linear;
+    z-index: 2;
+}
+.rg-thumb b {
+    position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%);
+    font: 900 17px 'Outfit', sans-serif; color: #FFF; white-space: nowrap;
+    background: var(--rg); padding: 3px 8px; border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+.rep-gauge[data-state="good"] .rg-thumb b { color: #10261A; }
+.rep-gauge.rg-flash .rg-track { animation: rgFlash 0.45s ease-out; }
+@keyframes rgFlash {
+    0% { box-shadow: 0 0 0 0 rgba(61, 220, 132, 0.9); transform: scaleX(1.25); }
+    100% { box-shadow: 0 0 0 18px rgba(61, 220, 132, 0); transform: scaleX(1); }
+}
+[data-theme="light"] .mchip-s { color: #A65A12; border-color: rgba(166, 90, 18, 0.35); }

@@ -399,6 +399,9 @@ function composeRecordingFrame(force) {
     ctx.font = `900 ${58 * s}px Outfit, sans-serif`;
     ctx.fillText(String(repCount), pad + 16 * s, pad + 86 * s);
 
+    // Right edge: the form ruler, same as on screen
+    if (window.RepGauge) RepGauge.drawRec(ctx, W, H, s);
+
     // Top-right: REC + elapsed
     const recText = `REC ${formatTime(recElapsedSec())}`;
     ctx.font = `800 ${16 * s}px Inter, sans-serif`;

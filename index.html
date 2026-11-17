@@ -235,6 +235,7 @@
             <div id="demo-stage" class="demo-stage" title="Kéo để xoay"><span class="demo-hint"><i class="fa-solid fa-arrows-left-right"></i> Kéo để xoay</span></div>
             <div class="demo-info">
                 <h4 id="demo-name"></h4>
+                <div id="demo-muscles" class="mchips"></div>
                 <ol id="demo-steps"></ol>
             </div>
         </section>
@@ -264,7 +265,20 @@
             </div>
 
             <!-- Full-screen workout: exercise name + time -->
-            <div class="ws-top"><span class="ws-chip"><span id="ws-ex-name">Squat</span> · <span id="ws-goal">15 rep</span></span></div>
+            <div class="ws-top"><span class="ws-chip"><span id="ws-ex-name">Squat</span> · <span id="ws-goal">15 rep</span></span><div id="ws-muscles" class="mchips ws-muscles"></div></div>
+
+            <!-- Form ruler: fill up to the green line, then go back to the rest zone -->
+            <div id="rep-gauge" class="rep-gauge" data-state="move" hidden>
+                <div id="rg-hint" class="rg-hint">▲ TỚI VẠCH XANH</div>
+                <div class="rg-track">
+                    <div id="rg-zone" class="rg-zone"></div>
+                    <div id="rg-rest" class="rg-rest"><span>VỀ</span></div>
+                    <div id="rg-fill" class="rg-fill"></div>
+                    <div id="rg-perfect" class="rg-line rg-perfect"><span>HOÀN HẢO</span></div>
+                    <div id="rg-goal" class="rg-line rg-goal"><span id="rg-goal-txt">ĐẠT</span></div>
+                    <div id="rg-thumb" class="rg-thumb"><b id="rg-angle">--°</b></div>
+                </div>
+            </div>
 
             <!-- Get ready: nothing is counted or recorded until BẮT ĐẦU -->
             <div id="ws-ready" class="ws-ready" hidden>
@@ -637,6 +651,7 @@
     <!-- App Script -->
     <script src="native.js"></script>
     <script src="exercises.js"></script>
+    <script src="muscles.js"></script>
     <script src="script.js"></script>
     <script src="recorder.js"></script>
     <script src="videos.js"></script>

@@ -192,12 +192,14 @@ function normalizePose(f, basePitch) {
     return p;
 }
 
+const MUSCLE_BASE = 0xd2c4bc;
 const ExerciseDemo = (() => {
     let THREE = null, loading = null;
     let renderer, scene, camera, rig, floor, wall, dumbbells = [];
     let container = null, key = null, demo = null, poses = null;
     let anchorRef = null, raf = 0, lastFrame = 0, startTs = 0;
     let az = 0, el = 12, dist = 3, target = null, resizeObs = null;
+    let muscleMats = {}, hiMats = [], legendEl = null;
     const rad = d => d * Math.PI / 180;
 
     async function load() {
@@ -237,8 +239,9 @@ const ExerciseDemo = (() => {
         wall.receiveShadow = true;
         scene.add(wall);
 
-        const skin = new THREE.MeshStandardMaterial({ color: 0xc9dfee, roughness: 0.55 });
-        const shirt = new THREE.MeshStandardMaterial({ color: 0xff5c34, roughness: 0.6 });
+        // anatomy-figure look: neutral body, every muscle group its own material
+        const skin = new THREE.MeshStandardMaterial({ color: 0xdfd5ce, roughness: 0.6 });
+        const shirt = skin;
         const shorts = new THREE.MeshStandardMaterial({ color: 0x351e28, roughness: 0.7 });
         const shoe = new THREE.MeshStandardMaterial({ color: 0xe9f056, roughness: 0.5 });
         const metal = new THREE.MeshStandardMaterial({ color: 0x4a2a38, roughness: 0.35, metalness: 0.6 });
@@ -252,6 +255,17 @@ const ExerciseDemo = (() => {
             return m;
         };
         const marker = (parent, x, y, z, r) => { const o = G(); o.position.set(x, y, z); o.userData.r = r; parent.add(o); return o; };
+        Object.keys(MUSCLE_INFO).forEach(k => {
+            muscleMats[k] = new THREE.MeshStandardMaterial({ color: MUSCLE_BASE, roughness: 0.45, emissive: 0x000000 });
+        });
+        // muscle = squashed sphere laid on the body
+        const musc = (parent, group, r, x, y, z, sx, sy, sz) => {
+            const m = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 14), muscleMats[group]);
+            m.position.set(x, y, z);
+            m.scale.set(sx, sy, sz);
+            parent.add(m);
+            return m;
+        };
 
         rig = { m: {} };
         const root = rig.root = G();
@@ -267,6 +281,13 @@ const ExerciseDemo = (() => {
         spine.add(torso);
         rig.m.mid = marker(spine, 0, 0.2, 0, 0.12);
         rig.m.chest = marker(spine, 0, 0.36, 0, 0.12);
+        [1, -1].forEach(s => {
+            musc(spine, 'chest', 0.08, 0.075 * s, 0.335, 0.075, 1.15, 0.78, 0.5);
+            [0.225, 0.155, 0.085].forEach(y => musc(spine, 'abs', 0.042, 0.042 * s, y, y > 0.1 ? 0.092 : 0.085, 1.1, 0.95, 0.42));
+            musc(spine, 'obliques', 0.055, 0.135 * s, 0.14, 0.035, 0.55, 1.35, 0.9);
+            musc(spine, 'back', 0.085, 0.08 * s, 0.29, -0.08, 1.1, 1.25, 0.45);
+            musc(spine, 'back', 0.05, 0.075 * s, 0.43, -0.035, 1.3, 0.6, 0.75);
+        });
 
         const neck = rig.neck = G();
         neck.position.y = 0.46;
@@ -287,12 +308,15 @@ const ExerciseDemo = (() => {
             S.shoulder.position.set(0.2 * s, 0.4, 0);
             spine.add(S.shoulder);
             S.shoulder.add(limb(0.3, 0.055, shirt));
-            S.shoulder.add(mesh(new THREE.SphereGeometry(0.068, 14, 10), shirt));
+            musc(S.shoulder, 'shoulders', 0.064, 0.006 * s, -0.02, 0, 1.0, 1.2, 1.0);
+            musc(S.shoulder, 'biceps', 0.048, 0, -0.14, 0.03, 0.9, 1.9, 0.8);
+            musc(S.shoulder, 'triceps', 0.048, 0, -0.13, -0.03, 0.9, 1.9, 0.8);
             rig.m['shoulder' + side] = marker(S.shoulder, 0, 0, 0, 0.07);
             S.elbow = G();
             S.elbow.position.y = -0.3;
             S.shoulder.add(S.elbow);
             S.elbow.add(limb(0.27, 0.045, skin));
+            musc(S.elbow, 'forearms', 0.045, 0, -0.09, 0.005, 1.05, 1.9, 1.05);
             S.elbow.add(mesh(new THREE.SphereGeometry(0.052, 12, 10), skin));
             rig.m['elbow' + side] = marker(S.elbow, 0, 0, 0, 0.05);
             const hand = mesh(new THREE.SphereGeometry(0.045, 12, 10), skin);
@@ -312,13 +336,17 @@ const ExerciseDemo = (() => {
             S.hip = G();
             S.hip.position.set(0.1 * s, -0.06, 0);
             root.add(S.hip);
-            S.hip.add(limb(0.44, 0.075, shorts));
+            S.hip.add(limb(0.44, 0.072, skin));
             S.hip.add(mesh(new THREE.SphereGeometry(0.085, 14, 10), shorts));
+            musc(S.hip, 'quads', 0.074, 0, -0.21, 0.028, 1.0, 2.5, 0.72);
+            musc(S.hip, 'hamstrings', 0.068, 0, -0.22, -0.026, 0.95, 2.4, 0.7);
+            musc(root, 'glutes', 0.078, 0.07 * s, -0.08, -0.07, 1, 0.95, 0.78);
             S.knee = G();
             S.knee.position.y = -0.44;
             S.hip.add(S.knee);
             S.knee.add(limb(0.43, 0.06, skin));
             S.knee.add(mesh(new THREE.SphereGeometry(0.068, 12, 10), skin));
+            musc(S.knee, 'calves', 0.052, 0, -0.14, -0.03, 0.95, 2.0, 0.85);
             rig.m['knee' + side] = marker(S.knee, 0, 0, 0, 0.06);
             S.ankle = G();
             S.ankle.position.y = -0.43;
@@ -423,6 +451,7 @@ const ExerciseDemo = (() => {
         demo = DEMOS[k] || DEMOS.SQUAT;
         poses = demo.frames.map(f => normalizePose(f, demo.pitch));
         dumbbells.forEach(d => { d.visible = !!demo.dumbbell; });
+        paintMuscles(k);
         anchorRef = null;
         // reference + framing from a couple of sampled poses
         place({ ...poses[0] });
@@ -448,6 +477,35 @@ const ExerciseDemo = (() => {
         dist = null; // computed in fitCamera()
         frameSize = Math.max(size.x, size.y, size.z);
         startTs = performance.now();
+    }
+
+    // main muscles orange + glowing, helpers amber, the rest neutral
+    function paintMuscles(k) {
+        const m = musclesOf(k);
+        hiMats = [];
+        Object.entries(muscleMats).forEach(([name, mat]) => {
+            if (m.p.includes(name)) {
+                mat.color.setHex(0xff5c34); mat.emissive.setHex(0xff3a12); mat.emissiveIntensity = 0.35;
+                hiMats.push(mat);
+            } else if (m.s.includes(name)) {
+                mat.color.setHex(0xf2a65a); mat.emissive.setHex(0x5a2a00); mat.emissiveIntensity = 0.25;
+            } else {
+                mat.color.setHex(MUSCLE_BASE); mat.emissive.setHex(0x000000); mat.emissiveIntensity = 0;
+            }
+        });
+        if (legendEl) renderLegend(k);
+    }
+    // glow peaks on the hard part of each rep
+    function pulse(t) {
+        const n = demo.frames.length;
+        const ph = (t / demo.period) % 1;
+        const e = 0.5 - 0.5 * Math.cos(Math.PI * n * ph);
+        hiMats.forEach(mat => { mat.emissiveIntensity = 0.15 + 0.75 * e; });
+    }
+    function renderLegend(k) {
+        const m = musclesOf(k);
+        legendEl.innerHTML = (m.p.length ? `<span class="lp"><i></i>Cơ chính: ${muscleNames(m.p)}</span>` : '')
+            + (m.s.length ? `<span class="ls"><i></i>Cơ phụ: ${muscleNames(m.s)}</span>` : '');
     }
 
     let frameSize = 2;
@@ -476,6 +534,7 @@ const ExerciseDemo = (() => {
         raf = requestAnimationFrame(loop);
         if (document.hidden || now - lastFrame < 30) return; // ~30 fps is plenty
         lastFrame = now;
+        pulse((now - startTs) / 1000);
         place(poseAt((now - startTs) / 1000));
         fitCamera();
         renderer.render(scene, camera);
@@ -490,12 +549,16 @@ const ExerciseDemo = (() => {
         if (container !== el) {
             container = el;
             el.appendChild(renderer.domElement);
+            if (!legendEl) { legendEl = document.createElement('div'); legendEl.className = 'demo-legend'; }
+            if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+            el.appendChild(legendEl);
             if (resizeObs) resizeObs.disconnect();
             resizeObs = new ResizeObserver(resize);
             resizeObs.observe(el);
             resize();
         }
         if (exKey !== key) setExercise(exKey);
+        else renderLegend(key);
         if (!raf) raf = requestAnimationFrame(loop);
     }
     let pending = null;
@@ -505,6 +568,7 @@ const ExerciseDemo = (() => {
         if (raf) cancelAnimationFrame(raf);
         raf = 0;
         if (renderer && renderer.domElement.parentNode) renderer.domElement.remove();
+        if (legendEl) legendEl.remove();
         if (resizeObs) resizeObs.disconnect();
         container = null;
     }
@@ -513,6 +577,7 @@ const ExerciseDemo = (() => {
     function renderAt(k, phase) {
         if (!container) return false;
         if (k !== key) setExercise(k);
+        pulse(demo.period * phase);
         place(poseAt(demo.period * phase));
         fitCamera();
         renderer.render(scene, camera);
@@ -534,6 +599,7 @@ const DemoUI = {
         const ex = EXERCISES[k];
         if (!ex) return;
         $('demo-name').innerHTML = `<i class="fa-solid ${ex.icon}"></i> ${ex.name}`;
+        $('demo-muscles').innerHTML = muscleChipsHTML(k, true);
         $('demo-steps').innerHTML = ExerciseDemo.steps(k).map(s => `<li>${s}</li>`).join('');
     },
 

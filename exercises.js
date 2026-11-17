@@ -130,7 +130,7 @@ const EXERCISES = {
     },
     SITUP: {
         name: 'Gập bụng', icon: 'fa-rotate-left',
-        joint: 'hip', jointLabel: 'Góc hông', dir: 'down',
+        joint: 'hip', jointLabel: 'Góc hông', dir: 'down', moving: 'A',
         top: 115, target: 70, perfect: 60, kcal: 0.3,
         restLabel: 'NẰM', activeLabel: 'NGỒI (ĐẠT)',
         view: 'Đặt camera sát sàn, nhìn ngang từ bên cạnh, thấy từ đầu tới gối.',
@@ -552,8 +552,10 @@ function processExercise(lm, width, height) {
 
     const targetOk = cfg.holdRange ? side.angle >= cfg.holdRange[0] && side.angle <= cfg.holdRange[1] : isTargetAngle(cfg, side.angle);
     const reached = targetOk && positionOk && activeOk;
-    drawJointAngleLabel(canvasCtx, v.x, v.y, side.angle, reached);
+    const state = !positionOk ? 'bad' : reached ? 'good' : 'move';
+    drawTrackedJoint(canvasCtx, side, cfg, state, width, height, !!cfg.kneeLift);
     updateGauge(cfg, side.angle);
+    RepGauge.update(cfg, side.angle, state);
 
     if (cfg.mode === 'hold') {
         processHold(cfg, side.angle, positionOk);
@@ -582,6 +584,7 @@ function processRep(cfg, angle, activeOk) {
             formScores.push(good ? 100 : 80);
             updateStatsDisplay();
             triggerRepAnimation();
+            RepGauge.counted();
             playBeep(800, 0.12);
             announceRep();
             setFeedback(`${cfg.msgs.counted} (${bestAngleInRep}°)`, 'good');
