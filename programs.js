@@ -494,13 +494,24 @@ const Runner = {
         setMode('camera');
         if (!isCameraActive) await startCamera();
         if (!isCameraActive) { this.stop(true); return; }
-        armTraining(false);
+        // nothing is counted or recorded until the user presses BẮT ĐẦU
+        this.waiting = true;
+        showReady(`${plan.title} · ${plan.steps.filter(s => s.kind !== 'rest').length} bài · ~${fmtMin(plan.seconds)}`);
+    },
+
+    // BẮT ĐẦU pressed on the ready screen: start recording + the plan (its own 4 s prep follows)
+    async begin() {
+        if (!this.active || !this.waiting) return;
+        this.waiting = false;
+        await armTraining(false);
+        if (!this.active || !trainingArmed) return;
         clearInterval(this.timer);
         this.timer = setInterval(() => this.tick(), 250);
         this.next();
     },
 
     stop(silent) {
+        this.waiting = false;
         clearInterval(this.timer);
         this.timer = null;
         if (this.active && !silent) saveSession();

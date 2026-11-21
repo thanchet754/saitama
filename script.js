@@ -5,7 +5,8 @@
 const MEDIAPIPE_POSE_VERSION = '0.5.1675469404';
 const HISTORY_KEY = 'aiPoseFitness.history';
 const HISTORY_LIMIT = 20;
-const VIS_THRESHOLD = 0.4;
+const VIS_THRESHOLD = 0.3;   // joint confident enough to COUNT with
+const VIS_DRAW = 0.12;       // joint confident enough to DRAW (faded below VIS_THRESHOLD)
 
 // Exercise definitions & counting logic live in exercises.js
 
@@ -25,7 +26,9 @@ let formScores = [];
 let sessionId = Date.now();
 
 // MediaPipe & WebRTC
-let poseInstance = null;
+let poseInstance = null;   // legacy @mediapipe/pose (fallback)
+let poseTask = null;       // MediaPipe Tasks PoseLandmarker (GPU, more accurate)
+let lastPoseTs = 0;
 let activeMediaStream = null;
 let loopToken = 0;        // increments on every (re)start so stale loops exit
 let wakeLock = null;
@@ -203,17 +206,46 @@ window.setArmMode = function (mode) {
 // ==============================================================
 // MEDIAPIPE & CAMERA
 // ==============================================================
+// Newer MediaPipe Pose Landmarker: GPU, much better at arms / legs than the 2023 solution.
+// Model file is served from our own domain (models/), wasm from jsDelivr; both cached offline.
+const TASKS_VISION = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35';
+const POSE_MODEL_URL = '/models/pose_landmarker_full.task';
+
+async function createPoseTask() {
+    const { FilesetResolver, PoseLandmarker } = await import(`${TASKS_VISION}/vision_bundle.mjs`);
+    const fileset = await FilesetResolver.forVisionTasks(`${TASKS_VISION}/wasm`);
+    const opts = delegate => ({
+        baseOptions: { modelAssetPath: POSE_MODEL_URL, delegate },
+        runningMode: 'VIDEO',
+        numPoses: 1,
+        minPoseDetectionConfidence: 0.5,
+        minPosePresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    try {
+        return await PoseLandmarker.createFromOptions(fileset, opts('GPU'));
+    } catch (e) {
+        console.warn('Pose GPU unavailable, using CPU', e);
+        return await PoseLandmarker.createFromOptions(fileset, opts('CPU'));
+    }
+}
+
 async function getPoseModel() {
-    if (poseInstance) return poseInstance;
+    if (poseTask || poseInstance) return;
+    loaderTextEl.textContent = 'Đang tải mô hình AI (lần đầu có thể mất vài giây)...';
+    try {
+        poseTask = await createPoseTask();
+        return;
+    } catch (e) {
+        console.warn('Pose Landmarker failed, falling back to legacy pose', e);
+    }
 
     if (typeof window.Pose === 'undefined') {
         throw new Error('Thư viện AI chưa tải được. Vui lòng kiểm tra kết nối internet rồi tải lại trang.');
     }
-
     poseInstance = new window.Pose({
         locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@${MEDIAPIPE_POSE_VERSION}/${file}`
     });
-
     poseInstance.setOptions({
         modelComplexity: 1,
         smoothLandmarks: true,
@@ -221,13 +253,17 @@ async function getPoseModel() {
         minDetectionConfidence: 0.5,
         minTrackingConfidence: 0.5
     });
-
     poseInstance.onResults(onPoseResults);
-
-    // Download & warm up the model before hiding the loader
-    loaderTextEl.textContent = 'Đang tải mô hình AI (lần đầu có thể mất vài giây)...';
     await poseInstance.initialize();
-    return poseInstance;
+}
+
+// Some Tasks builds report visibility as 0 for every point: then treat points
+// inside the frame as visible so the skeleton and counting still work.
+function normalizeLandmarks(lm) {
+    if (!lm) return null;
+    const maxVis = lm.reduce((m, p) => Math.max(m, p.visibility || 0), 0);
+    if (maxVis > 0.01) return lm;
+    return lm.map(p => ({ ...p, visibility: (p.x > -0.05 && p.x < 1.05 && p.y > -0.05 && p.y < 1.05) ? 0.9 : 0.1 }));
 }
 
 window.toggleCamera = async function () {
@@ -315,9 +351,9 @@ function announceRep() {
 }
 
 // ---------- Get ready -> BẮT ĐẦU -> 3-2-1 -> count + record ----------
-function showReady() {
+function showReady(goalText) {
     renderGoal();
-    $('ws-ready-goal').textContent = `Mục tiêu: ${freeGoal()} ${isHoldEx(currentExercise) ? 'giây' : 'rep'}`;
+    $('ws-ready-goal').textContent = goalText || `Mục tiêu: ${freeGoal()} ${isHoldEx(currentExercise) ? 'giây' : 'rep'}`;
     $('ws-ready').hidden = false;
     $('ws-ready').classList.remove('counting');
     setFeedback('Vào vị trí rồi bấm BẮT ĐẦU', 'ready');
@@ -346,7 +382,7 @@ async function armTraining(countdown = true) {
     startTimer();
     if (typeof startRecording === 'function') startRecording();
 }
-window.beginTraining = () => armTraining(true);
+window.beginTraining = () => (window.Runner && Runner.waiting) ? Runner.begin() : armTraining(true);
 
 // ---------- Full-screen, distraction-free workout view ----------
 function updateStartButton() {
@@ -542,7 +578,16 @@ window.resetCounter = function () {
 async function runVideoLoop(token) {
     if (token !== loopToken || !isCameraActive) return;
 
-    if (videoEl.readyState >= 2 && poseInstance) {
+    if (videoEl.readyState >= 2 && poseTask) {
+        try {
+            const ts = Math.max(performance.now(), lastPoseTs + 1); // must increase
+            lastPoseTs = ts;
+            const res = poseTask.detectForVideo(videoEl, ts);
+            onPoseResults({ image: videoEl, poseLandmarks: normalizeLandmarks(res.landmarks && res.landmarks[0]) });
+        } catch (e) {
+            console.warn('Pose frame issue', e);
+        }
+    } else if (videoEl.readyState >= 2 && poseInstance) {
         try {
             await poseInstance.send({ image: videoEl });
         } catch (e) {
@@ -590,6 +635,7 @@ function toPx(p, width, height) {
 }
 
 const isVisible = (p) => !!p && (p.visibility ?? 1) > VIS_THRESHOLD;
+const isDrawable = (p) => !!p && (p.visibility ?? 1) > VIS_DRAW;
 
 function isPortraitScreen() {
     return window.matchMedia('(orientation: portrait)').matches && window.innerWidth <= 820;
@@ -655,21 +701,34 @@ const SKELETON_JOINTS = [...new Set(SKELETON_PAIRS.flat())];
 function drawNeonSkeleton(ctx, lm, width, height) {
     ctx.save();
     ctx.lineCap = 'round';
-    const segs = [];
+    // sure = both ends confident (solid), unsure = drawn dashed + faded instead of hidden,
+    // so a leg in a dim room or under a long dress doesn't simply disappear
+    const sure = [], unsure = [];
     SKELETON_PAIRS.forEach(([i, j]) => {
-        if (isVisible(lm[i]) && isVisible(lm[j])) segs.push([toPx(lm[i], width, height), toPx(lm[j], width, height)]);
+        if (!isDrawable(lm[i]) || !isDrawable(lm[j])) return;
+        const seg = [toPx(lm[i], width, height), toPx(lm[j], width, height)];
+        (isVisible(lm[i]) && isVisible(lm[j]) ? sure : unsure).push(seg);
     });
-    [[7, 'rgba(0, 0, 0, 0.45)'], [3.5, 'rgba(255, 255, 255, 0.92)']].forEach(([w, c]) => {
+    const stroke = (segs, w, c, dash) => {
+        if (!segs.length) return;
         ctx.lineWidth = w;
         ctx.strokeStyle = c;
+        ctx.setLineDash(dash || []);
         ctx.beginPath();
         segs.forEach(([a, b]) => { ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); });
         ctx.stroke();
-    });
+    };
+    stroke(sure, 7, 'rgba(0, 0, 0, 0.45)');
+    stroke(sure, 3.5, 'rgba(255, 255, 255, 0.95)');
+    stroke(unsure, 6, 'rgba(0, 0, 0, 0.3)', [10, 8]);
+    stroke(unsure, 3, 'rgba(255, 255, 255, 0.6)', [10, 8]);
+    ctx.setLineDash([]);
 
     SKELETON_JOINTS.forEach(idx => {
-        if (!isVisible(lm[idx])) return;
-        const { x, y } = toPx(lm[idx], width, height);
+        const p = lm[idx];
+        if (!isDrawable(p)) return;
+        const { x, y } = toPx(p, width, height);
+        ctx.globalAlpha = isVisible(p) ? 1 : 0.55;
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, 2 * Math.PI);
         ctx.fillStyle = '#FFFFFF';

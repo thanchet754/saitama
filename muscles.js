@@ -118,7 +118,7 @@ function drawMuscleGlow(ctx, lm, width, height, key, effort) {
             if (drawn.has(id)) return; // quads + hamstrings share a segment
             drawn.add(id);
             const p = pickLm(lm, i), q = pickLm(lm, j);
-            if (!isVisible(p) || !isVisible(q)) return;
+            if (!isDrawable(p) || !isDrawable(q)) return;
             const A = toPx(p, width, height), B = toPx(q, width, height);
             ctx.beginPath();
             ctx.moveTo(A.x, A.y);
@@ -127,7 +127,7 @@ function drawMuscleGlow(ctx, lm, width, height, key, effort) {
         });
         (sh.blob || []).forEach(i => {
             const p = lm[i];
-            if (!isVisible(p)) return;
+            if (!isDrawable(p)) return;
             const P = toPx(p, width, height);
             ctx.beginPath();
             ctx.arc(P.x, P.y, thick * 0.75, 0, Math.PI * 2);
@@ -281,7 +281,7 @@ const RepGauge = (() => {
         q('rg-angle').textContent = `${angle}°`;
         [['rg-goal', scale.goal], ['rg-perfect', scale.far], ['rg-rest', scale.rest / 2]].forEach(([id, v]) => {
             const n = q(id).classList.contains('rg-rest') ? q(id).firstElementChild : q(id);
-            n.classList.toggle('near', Math.abs(v - u) < 0.07);
+            n.classList.toggle('near', Math.abs(v - u) < 0.1);
         });
         let hint;
         if (state === 'bad') hint = 'SAI TƯ THẾ';

@@ -3,7 +3,7 @@
 // - versioned CDN libs, fonts, MediaPipe model: cache-first
 // - map tiles: cache-first, capped
 // - Supabase / geocoding APIs: never cached (data is stored in localStorage and synced by the page)
-const VERSION = 'saitama-v9';
+const VERSION = 'saitama-v10';
 const SHELL = `${VERSION}-shell`;
 const CDN = `${VERSION}-cdn`;
 const TILES = `${VERSION}-tiles`;
@@ -11,11 +11,15 @@ const MAX_TILES = 600;
 
 const SHELL_FILES = [
     '/', '/style.css', '/native.js', '/exercises.js', '/muscles.js', '/script.js', '/recorder.js', '/videos.js', '/progress.js', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png',
-    '/activity.js', '/programs.js', '/demo3d.js', '/offline.js', '/app-version.json'
+    '/activity.js', '/programs.js', '/demo3d.js', '/offline.js', '/app-version.json', '/models/pose_landmarker_full.task'
 ];
 
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/';
+const TV = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/';
 const CDN_WARM = [
+    TV + 'vision_bundle.mjs',
+    TV + 'wasm/vision_wasm_internal.js',
+    TV + 'wasm/vision_wasm_internal.wasm',
     MP + 'pose.js',
     MP + 'pose_solution_packed_assets_loader.js',
     MP + 'pose_solution_packed_assets.data',
@@ -67,7 +71,8 @@ self.addEventListener('fetch', (event) => {
 
     if (url.origin === self.location.origin) {
         if (url.pathname === '/sw.js') return;
-        event.respondWith(networkFirst(req));
+        // the 9 MB AI model never changes under the same name: cache-first
+        event.respondWith(url.pathname.startsWith('/models/') ? cacheFirst(req, SHELL) : networkFirst(req));
     } else if (isCdn(url)) {
         event.respondWith(cacheFirst(req, CDN));
     } else if (isTile(url)) {
