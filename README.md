@@ -1,38 +1,56 @@
-# AI Pose Fitness - Đếm Squat & Gập Tạ Bằng Khung Xương AI
-
-Web App chuyên biệt ứng dụng trí tuệ nhân tạo (Google MediaPipe Pose) để **đếm số lần Squat** và **đếm số lần Gập tạ tay (Bicep Curl)** tự động theo thời gian thực qua Camera.
-
----
-
-## 🚀 Tính Năng Chính
-
-### 1. 🏋️‍♂️ Đếm Squat AI (Đứng lên ngồi xuống)
-- Nhận diện khớp hông, đầu gối, cổ chân.
-- Đo góc gập đầu gối và hiển thị góc động ngay trên cơ thể.
-- Đứng thẳng (> 160°) -> Ngồi xổm sâu (<= 95°) -> Đứng thẳng dậy: **Tự động tăng +1 Rep!**
-- Lời nhắc tư thế thông minh: báo khi chưa hạ đủ độ sâu hoặc đứng chưa thẳng.
-
-### 2. 💪 Đếm Gập Tạ Tay AI (Bicep Curl)
-- Nhận diện khớp vai, khuỷu tay, cổ tay.
-- Hỗ trợ chọn: **Cả 2 tay**, **Tay phải** hoặc **Tay trái**.
-- Duỗi tay thẳng (> 150°) -> Gập tạ lên đỉnh (<= 48°) -> Hạ tạ duỗi thẳng: **Tự động tăng +1 Rep!**
-
-### 3. 🎯 Trải Nghiệm Người Dùng
-- **Giao diện tối giản, bấm là ăn ngay**, không có modal hay lớp phủ che màn hình.
-- **Khung xương Neon Cyberpunk** phát sáng đẹp mắt.
-- **Âm thanh giọng đọc tiếng Việt**: Tự động đếm "Một", "Hai", "Ba"... bằng Web Speech API và âm thanh beep chuẩn xác.
-- **Đổi camera trước / sau** thuận tiện trên cả điện thoại di động và máy tính.
-- **Thống kê buổi tập**: Số rep, thời gian tập, calo tiêu hao, độ chuẩn form.
+# AnyVideoPro 🚀
+**Trang web tải video đa nền tảng chất lượng cao (Facebook, TikTok, Instagram, YouTube, Twitter/X, Threads, Reddit, Pinterest...)**
 
 ---
 
-## 💻 Cách Khởi Chạy
+## 🌟 Tính Năng Nổi Bật
 
-### Chạy trực tiếp trên máy:
+- 🎬 **Hỗ trợ đa nền tảng**: Tải video từ **Facebook** (Reels, Watch), **TikTok** (không logo / no watermark), **Instagram** (Reels, Post), **YouTube** (Shorts, Full video, MP3), **Twitter/X**, **Threads**, **Reddit**, v.v.
+- ⚡ **Chất lượng cao**: Lựa chọn 1080p Full HD, 720p HD, 480p, 360p hoặc chất lượng gốc tốt nhất.
+- 🎵 **Tách nhạc MP3**: Chuyển đổi và trích xuất âm thanh MP3 chất lượng cao (192kbps - 320kbps) chỉ với 1 click.
+- 🚫 **Xóa Logo TikTok**: Tải video TikTok & Douyin sạch không dính watermark logo mờ.
+- 💻 **Giao diện hiện đại**: Thiết kế Dark/Light mode cực đẹp, hiệu ứng Glassmorphism, tự động nhận diện logo nền tảng khi dán link.
+- 💾 **Lịch sử tải về**: Lưu trữ danh sách video vừa tải trong trình duyệt (localStorage).
+- 🛡️ **An toàn & Riêng tư**: Không quảng cáo độc hại, không thu thập cookie hoặc dữ liệu cá nhân.
+
+---
+
+## 🚀 Hướng Dẫn Sử Dụng (1 Click Trên Windows)
+
+1. Nhấp đúp chuột vào file **`start.bat`** trong thư mục dự án.
+2. Trình duyệt sẽ tự động mở trang web tại địa chỉ: `http://localhost:8000`.
+3. Dán link video (Facebook, TikTok, Instagram, YouTube) và bấm **Tải Ngay**!
+
+---
+
+## 🛠️ Chạy Thủ Công (Dành cho Developer)
+
+### 1. Cài đặt thư viện:
 ```bash
-python -m http.server 8000
+pip install -r requirements.txt
 ```
-Mở trình duyệt: `http://localhost:8000`
 
-### Triển khai (Deploy):
-Upload thư mục này lên GitHub, Vercel, Netlify hoặc GitHub Pages là có thể chạy ngay với giao thức HTTPS!
+### 2. Khởi chạy Server:
+```bash
+python app.py
+```
+Máy chủ sẽ chạy tại `http://localhost:8000`.
+
+---
+
+## 📁 Cấu Trúc Dự Án
+
+```
+├── app.py            # Backend FastAPI xử lý phân tích và tải video (yt-dlp + ffmpeg)
+├── index.html        # Giao diện chính người dùng
+├── style.css         # Bộ giao diện Dark Glassmorphism cao cấp
+├── script.js         # Logic Frontend, nhận diện nền tảng, gọi API, lưu lịch sử
+├── start.bat         # File kích hoạt 1-click cho Windows
+├── requirements.txt  # Danh sách thư viện Python cần thiết
+└── README.md         # Tài liệu hướng dẫn dự án
+```
+
+---
+
+## 📜 Giấy Phép & Tuyên Bố Miễn Trừ Trách Nhiệm
+Dự án được xây dựng cho mục đích học tập và sử dụng cá nhân phi thương mại. Vui lòng tôn trọng quyền sở hữu trí tuệ và điều khoản của các nhà sáng tạo nội dung trên từng nền tảng.

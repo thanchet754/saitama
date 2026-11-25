@@ -2,171 +2,301 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Pose Fitness - Đếm Squat & Gập Tạ Bằng Khung Xương</title>
-    
-    <!-- Google Fonts & FontAwesome -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Google MediaPipe Pose CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-
-    <!-- App Stylesheet -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoDownloader Pro - Tải Video Facebook, TikTok, Instagram, YouTube</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
-<body>
+<body class="dark-theme">
+    <!-- Background Ambient Glow -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
 
-    <div class="main-wrapper">
+    <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <div class="logo">
-                <i class="fa-solid fa-bolt-lightning logo-icon"></i>
-                <div class="logo-text">
-                    <h1>AI POSE TRACKER</h1>
-                    <span>Đếm Squat & Gập Tạ Bằng Khung Xương</span>
+            <div class="brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                </div>
+                <div class="brand-info">
+                    <span class="brand-name">AnyVideo<span class="gradient-text">Pro</span></span>
+                    <span class="brand-badge">v2.0</span>
                 </div>
             </div>
-            <div id="ai-status-badge" class="status-badge ready">
-                <span class="dot"></span>
-                <span id="ai-status-text">AI Đã Sẵn Sàng</span>
+
+            <div class="header-actions">
+                <div id="serverStatus" class="status-indicator online">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Server Sẵn Sàng</span>
+                </div>
+                <button id="themeToggle" class="btn-icon" title="Chuyển chế độ sáng/tối">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
             </div>
         </header>
 
-        <!-- Exercise Selector (2 Bài tập chính) -->
-        <section class="exercise-picker">
-            <button id="btn-exercise-squat" class="exercise-btn active" onclick="selectExercise('SQUAT')">
-                <div class="btn-icon-wrap"><i class="fa-solid fa-person-arrow-down-to-line"></i></div>
-                <div class="btn-info">
-                    <h3>ĐẾM SQUAT</h3>
-                    <p>Đứng lên ngồi xuống (Đo góc gối)</p>
+        <!-- Main Hero Section -->
+        <main class="hero-section">
+            <div class="hero-content">
+                <div class="pill-badge">
+                    <i class="fa-solid fa-bolt"></i> Tải Video Đa Nền Tảng Không Giới Hạn
                 </div>
-            </button>
+                <h1 class="hero-title">
+                    Tải Video từ <span class="gradient-text">Facebook, TikTok, Instagram, YouTube</span>
+                </h1>
+                <p class="hero-desc">
+                    Hỗ trợ chất lượng cao nhất 1080p, 2K, 4K, chuyển đổi MP3 âm thanh cực nét, xóa logo TikTok hoàn toàn miễn phí.
+                </p>
 
-            <button id="btn-exercise-curl" class="exercise-btn" onclick="selectExercise('CURL')">
-                <div class="btn-icon-wrap"><i class="fa-solid fa-dumbbell"></i></div>
-                <div class="btn-info">
-                    <h3>ĐẾM GẬP TẠ TAY</h3>
-                    <p>Bicep Curl (Đo góc khuỷu tay)</p>
-                </div>
-            </button>
-        </section>
+                <!-- Search / Input Card -->
+                <div class="downloader-card">
+                    <form id="downloadForm" class="input-form">
+                        <div class="input-wrapper">
+                            <div class="platform-icon-wrap" id="platformIconWrap">
+                                <i class="fa-solid fa-link" id="detectedIcon"></i>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="urlInput" 
+                                class="url-input" 
+                                placeholder="Dán link Facebook, TikTok, Instagram, YouTube tại đây..." 
+                                autocomplete="off"
+                                spellcheck="false"
+                                required
+                            >
+                            <button type="button" id="pasteBtn" class="btn-paste" title="Dán từ Clipboard">
+                                <i class="fa-regular fa-clipboard"></i>
+                                <span>Dán</span>
+                            </button>
+                            <button type="button" id="clearBtn" class="btn-clear hidden" title="Xóa link">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <button type="submit" id="submitBtn" class="btn-submit">
+                            <span class="btn-text">Tải Ngay</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
 
-        <!-- Sub-selector for Arm mode (only for Bicep Curl) -->
-        <div id="arm-picker-row" class="arm-picker-row" style="display: none;">
-            <span class="label"><i class="fa-solid fa-hand-fist"></i> Chọn tay:</span>
-            <div class="arm-buttons">
-                <button class="arm-btn active" onclick="setArmMode('BOTH')">Cả 2 Tay</button>
-                <button class="arm-btn" onclick="setArmMode('RIGHT')">Tay Phải</button>
-                <button class="arm-btn" onclick="setArmMode('LEFT')">Tay Trái</button>
-            </div>
-        </div>
-
-        <!-- Camera & Canvas Display Stage -->
-        <section class="camera-stage">
-            <!-- Hidden video input -->
-            <video id="video-element" playsinline webkit-playsinline muted style="display: none;"></video>
-            
-            <!-- Main Canvas for Video + Skeleton Overlay -->
-            <canvas id="output-canvas" class="output-canvas"></canvas>
-
-            <!-- Placeholder overlay when camera is not started yet -->
-            <div id="camera-placeholder" class="camera-placeholder">
-                <div class="placeholder-icon">
-                    <i class="fa-solid fa-camera"></i>
-                </div>
-                <h3>Camera Đang Tắt</h3>
-                <p>Bấm nút <strong>"BẬT CAMERA & BẮT ĐẦU"</strong> bên dưới để AI tự động vẽ khung xương và đếm số rep cho bạn!</p>
-            </div>
-
-            <!-- Loading overlay when camera/AI is starting -->
-            <div id="camera-loader" class="camera-loader" style="display: none;">
-                <div class="spinner"></div>
-                <p>Đang nạp Camera & Khung Xương AI...</p>
-                <span>Vui lòng cấp quyền truy cập Camera khi trình duyệt hỏi</span>
-            </div>
-
-            <!-- Real-time HUD elements floating on Canvas -->
-            <div id="stage-hud" class="stage-hud" style="display: none;">
-                <!-- Rep Counter -->
-                <div class="hud-rep-card">
-                    <span class="hud-label">SỐ LẦN (REPS)</span>
-                    <span id="hud-rep-number" class="hud-rep-val">0</span>
-                </div>
-
-                <!-- Angle & Gauge -->
-                <div class="hud-gauge-card">
-                    <div class="gauge-head">
-                        <span id="gauge-joint-label">Góc gối</span>
-                        <span id="hud-angle-val">175°</span>
-                    </div>
-                    <div class="gauge-bar">
-                        <div id="gauge-fill" class="gauge-fill" style="width: 0%;"></div>
-                    </div>
-                    <div class="gauge-sub">
-                        <span id="hud-stage-label" class="hud-stage-badge">UP (ĐỨNG)</span>
-                        <span id="gauge-target-text">Chuẩn: &lt; 95°</span>
+                    <!-- Platform Chips -->
+                    <div class="platform-chips">
+                        <span class="chips-label">Hỗ trợ:</span>
+                        <div class="chips-list">
+                            <button class="chip" data-example="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+                                <i class="fa-brands fa-youtube" style="color: #ff0000;"></i> YouTube
+                            </button>
+                            <button class="chip" data-example="https://www.tiktok.com">
+                                <i class="fa-brands fa-tiktok" style="color: #00f2fe;"></i> TikTok (No Logo)
+                            </button>
+                            <button class="chip" data-example="https://www.facebook.com">
+                                <i class="fa-brands fa-facebook" style="color: #1877f2;"></i> Facebook
+                            </button>
+                            <button class="chip" data-example="https://www.instagram.com">
+                                <i class="fa-brands fa-instagram" style="color: #e1306c;"></i> Instagram Reels
+                            </button>
+                            <button class="chip" data-example="https://twitter.com">
+                                <i class="fa-brands fa-x-twitter" style="color: #ffffff;"></i> Twitter / X
+                            </button>
+                            <button class="chip" data-example="https://threads.net">
+                                <i class="fa-brands fa-threads" style="color: #aaaaaa;"></i> Threads
+                            </button>
+                            <button class="chip" data-example="https://reddit.com">
+                                <i class="fa-brands fa-reddit" style="color: #ff4500;"></i> Reddit
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Form Feedback Message -->
-                <div id="hud-feedback-pill" class="hud-feedback-pill ready">
-                    <i class="fa-solid fa-circle-info"></i>
-                    <span id="hud-feedback-text">Đứng lùi lại để camera thấy toàn thân</span>
+                <!-- Loader Box -->
+                <div id="loaderBox" class="loader-box hidden">
+                    <div class="spinner-ring"></div>
+                    <div class="loader-text-wrap">
+                        <p class="loader-title">Đang phân tích liên kết...</p>
+                        <p class="loader-subtitle">Đang truy xuất thông tin định dạng và chất lượng video tốt nhất</p>
+                    </div>
+                </div>
+
+                <!-- Error Notice -->
+                <div id="errorBox" class="error-box hidden">
+                    <div class="error-icon">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="error-content">
+                        <h4 class="error-title">Không thể tải video</h4>
+                        <p id="errorMessage" class="error-message">Vui lòng kiểm tra lại đường dẫn.</p>
+                    </div>
+                    <button type="button" id="dismissErrorBtn" class="btn-dismiss">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Result Card -->
+                <div id="resultCard" class="result-card hidden">
+                    <div class="result-grid">
+                        <!-- Preview Column -->
+                        <div class="preview-col">
+                            <div class="thumbnail-wrapper">
+                                <img id="videoThumb" src="" alt="Thumbnail Video" class="video-thumbnail">
+                                <span id="videoDuration" class="duration-badge">00:00</span>
+                                <div class="platform-badge" id="videoPlatformBadge">
+                                    <i id="videoPlatformIcon" class="fa-brands fa-youtube"></i>
+                                    <span id="videoPlatformName">YouTube</span>
+                                </div>
+                            </div>
+                            <div class="video-meta">
+                                <h3 id="videoTitle" class="video-title">Tiêu đề video</h3>
+                                <div class="meta-row">
+                                    <span class="meta-item"><i class="fa-solid fa-user"></i> <span id="videoUploader">Tác giả</span></span>
+                                    <span class="meta-item" id="viewsContainer"><i class="fa-solid fa-eye"></i> <span id="videoViews">0 lượt xem</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formats Options Column -->
+                        <div class="options-col">
+                            <div class="options-header">
+                                <h3>Chọn định dạng tải về</h3>
+                                <span class="badge-direct"><i class="fa-solid fa-shield-halved"></i> Tải trực tiếp</span>
+                            </div>
+
+                            <!-- Tabs for Video and Audio -->
+                            <div class="format-tabs">
+                                <button class="tab-btn active" data-tab="video">
+                                    <i class="fa-solid fa-video"></i> Video (MP4)
+                                </button>
+                                <button class="tab-btn" data-tab="audio">
+                                    <i class="fa-solid fa-music"></i> Âm Thanh (MP3/M4A)
+                                </button>
+                            </div>
+
+                            <!-- Video Formats List -->
+                            <div id="videoFormatsList" class="formats-list active">
+                                <!-- Populated dynamically -->
+                            </div>
+
+                            <!-- Audio Formats List -->
+                            <div id="audioFormatsList" class="formats-list">
+                                <!-- Populated dynamically -->
+                            </div>
+
+                            <!-- Downloading state banner -->
+                            <div id="downloadingState" class="downloading-banner hidden">
+                                <div class="mini-spinner"></div>
+                                <span>Đang khởi tạo tải xuống từ máy chủ... Vui lòng đợi trong giây lát!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download History -->
+                <div class="history-section" id="historySection">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Tải Gần Đây</h3>
+                        <button id="clearHistoryBtn" class="btn-link">Xóa lịch sử</button>
+                    </div>
+                    <div id="historyList" class="history-grid">
+                        <div class="empty-history">
+                            <i class="fa-regular fa-folder-open"></i>
+                            <p>Chưa có video nào trong lịch sử tải</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features Grid -->
+                <div class="features-section">
+                    <div class="feature-card">
+                        <div class="feature-icon icon-lightning"><i class="fa-solid fa-bolt-lightning"></i></div>
+                        <h4>Tốc Độ Cao</h4>
+                        <p>Xử lý phân tích đa luồng, tải trực tiếp từ máy chủ không qua quảng cáo rút gọn.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon icon-video"><i class="fa-solid fa-film"></i></div>
+                        <h4>Độ Phân Giải Cao</h4>
+                        <p>Hỗ trợ Full HD 1080p, 2K, 4K, 60fps với chất lượng hình ảnh và âm thanh nguyên bản.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon icon-tiktok"><i class="fa-brands fa-tiktok"></i></div>
+                        <h4>Xóa Logo TikTok</h4>
+                        <p>Tải video TikTok và Douyin không có hình mờ (watermark) nhanh chóng.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon icon-shield"><i class="fa-solid fa-shield-halved"></i></div>
+                        <h4>An Toàn 100%</h4>
+                        <p>Bảo mật tuyệt đối, không thu thập thông tin người dùng, không cần đăng ký tài khoản.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Section -->
+                <div class="faq-section">
+                    <h2 class="section-title">Câu Hỏi Thường Gặp (FAQ)</h2>
+                    <div class="faq-accordion">
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Làm thế nào để lấy link video từ Facebook hoặc TikTok?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Trên điện thoại: Mở video trong app Facebook/TikTok > bấm nút <strong>Chia sẻ (Share)</strong> > chọn <strong>Sao chép liên kết (Copy Link)</strong>. Sau đó dán vào thanh tìm kiếm ở trên và bấm "Tải Ngay".</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Video tải về nằm ở đâu trên máy tính/điện thoại?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Tất cả các tập tin tải về mặc định sẽ nằm trong thư mục <strong>Downloads (Tải về)</strong> trên máy tính hoặc bộ sưu tập / ứng dụng Tệp trên điện thoại.</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Tôi có thể tách nhạc MP3 từ video YouTube không?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Có! Sau khi dán link và phân tích, chuyển sang tab <strong>Âm Thanh (MP3/M4A)</strong> và bấm tải định dạng MP3 192k để lưu file nhạc.</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Cách khởi động máy chủ tải video offline trên máy tính?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Bạn chỉ cần nhấp đúp chuột vào file <code>start.bat</code> trong thư mục dự án, hệ thống sẽ tự động bật máy chủ Python FastAPI và mở trình duyệt tại địa chỉ <code>http://localhost:8000</code>.</p>
+                            </div>
+                        </details>
+                    </div>
                 </div>
             </div>
-        </section>
+        </main>
 
-        <!-- Main Action Controls -->
-        <section class="controls-panel">
-            <button id="btn-toggle-camera" class="btn btn-primary" onclick="toggleCamera()">
-                <i class="fa-solid fa-play"></i> <span>BẬT CAMERA & BẮT ĐẦU</span>
-            </button>
-
-            <button id="btn-flip-camera" class="btn btn-secondary" onclick="flipCamera()" title="Đổi camera trước / sau">
-                <i class="fa-solid fa-camera-rotate"></i> <span>Đổi Camera</span>
-            </button>
-
-            <button id="btn-toggle-voice" class="btn btn-secondary active" onclick="toggleVoice()" title="Bật/Tắt giọng đọc số">
-                <i class="fa-solid fa-volume-high"></i> <span>Giọng Đọc: BẬT</span>
-            </button>
-
-            <button id="btn-reset-counter" class="btn btn-outline" onclick="resetCounter()" title="Reset bộ đếm">
-                <i class="fa-solid fa-rotate-left"></i> <span>Reset 0</span>
-            </button>
-        </section>
-
-        <!-- Workout Stats Grid -->
-        <section class="stats-panel">
-            <div class="stat-card">
-                <span class="stat-title"><i class="fa-solid fa-clock"></i> Thời Gian</span>
-                <span id="stat-time" class="stat-number">00:00</span>
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>© 2026 <strong>AnyVideoPro</strong>. Dự án mã nguồn mở hỗ trợ tải video đa nền tảng.</p>
+                <div class="footer-links">
+                    <span class="footer-tag"><i class="fa-solid fa-code"></i> Python FastAPI & yt-dlp</span>
+                    <span class="footer-tag"><i class="fa-brands fa-github"></i> github.com/thanchet754/saitama</span>
+                </div>
             </div>
-            <div class="stat-card">
-                <span class="stat-title"><i class="fa-solid fa-fire"></i> Lượng Calo</span>
-                <span id="stat-cals" class="stat-number">0 kcal</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-title"><i class="fa-solid fa-bullseye"></i> Chuẩn Form</span>
-                <span id="stat-accuracy" class="stat-number">100%</span>
-            </div>
-        </section>
-
-        <!-- Instructions Card -->
-        <section class="guide-panel">
-            <h3><i class="fa-solid fa-lightbulb"></i> Mẹo Đạt Chuẩn AI</h3>
-            <ul id="guide-list">
-                <li><strong>Góc đặt camera:</strong> Đặt điện thoại hoặc máy tính cách bạn khoảng 1.5 - 2 mét.</li>
-                <li><strong>Ánh sáng:</strong> Đứng ở nơi đủ sáng để AI dễ dàng nhận diện các khớp cơ thể.</li>
-                <li><strong>Squat:</strong> Hạ mông ngồi xổm sâu (đùi song song hoặc thấp hơn đầu gối) rồi đứng thẳng dậy để được tính 1 rep.</li>
-                <li><strong>Gập tạ:</strong> Duỗi thẳng tay xuống, sau đó gập tạ sát ngực rồi hạ tạ có kiểm soát.</li>
-            </ul>
-        </section>
+        </footer>
     </div>
 
-    <!-- App Script -->
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <i id="toastIcon" class="fa-solid fa-circle-check"></i>
+        <span id="toastMsg">Thông báo</span>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
