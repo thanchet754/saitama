@@ -94,13 +94,15 @@ def format_filesize(bytes_val: Optional[int]) -> str:
     return f"{bytes_val:.1f} TB"
 
 def get_ydl_base_opts() -> dict:
-    return {
+    opts = {
         "quiet": True,
         "no_warnings": True,
         "nocheckcertificate": True,
-        "ffmpeg_location": ffmpeg_exe,
         "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     }
+    if ffmpeg_exe and (os.path.exists(ffmpeg_exe) or shutil.which("ffmpeg")):
+        opts["ffmpeg_location"] = ffmpeg_exe
+    return opts
 
 @app.get("/api/health")
 def health_check():
