@@ -1,302 +1,596 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" class="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VideoDownloader Pro - Tải Video Facebook, TikTok, Instagram, YouTube</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TechStore Pro - Cửa Hàng Công Nghệ Số 1 | Điện Thoại, Laptop, Phụ Kiện</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="dark-theme">
-    <!-- Background Ambient Glow -->
-    <div class="ambient-glow glow-1"></div>
-    <div class="ambient-glow glow-2"></div>
-    <div class="ambient-glow glow-3"></div>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
 
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="brand">
-                <div class="brand-logo">
-                    <i class="fa-solid fa-cloud-arrow-down"></i>
-                </div>
-                <div class="brand-info">
-                    <span class="brand-name">AnyVideo<span class="gradient-text">Pro</span></span>
-                    <span class="brand-badge">v2.0</span>
-                </div>
-            </div>
+  <!-- Top Announcement Bar -->
+  <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white text-xs sm:text-sm py-2 px-4 text-center font-medium flex items-center justify-center gap-2">
+    <span>🎉 Khai xuân công nghệ - Giảm tới 30% cho Laptop & Điện thoại | Hỗ trợ trả góp 0% & Quét VietQR tức thì!</span>
+  </div>
 
-            <div class="header-actions">
-                <div id="serverStatus" class="status-indicator online">
-                    <span class="status-dot"></span>
-                    <span class="status-text">Server Sẵn Sàng</span>
-                </div>
-                <button id="themeToggle" class="btn-icon" title="Chuyển chế độ sáng/tối">
-                    <i class="fa-solid fa-moon"></i>
-                </button>
-            </div>
-        </header>
+  <!-- Navbar -->
+  <header class="sticky top-0 z-40 glass-nav border-b border-slate-200/80 dark:border-slate-800/80 transition-colors duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <a href="/" class="flex items-center gap-3 group">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:scale-105 transition-transform">
+          <i class="fa-solid fa-bolt text-xl"></i>
+        </div>
+        <div>
+          <span class="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent">TechStore</span>
+          <span class="text-xs uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 ml-1">Pro</span>
+          <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wide">Kho Công Nghệ Chính Hãng</p>
+        </div>
+      </a>
 
-        <!-- Main Hero Section -->
-        <main class="hero-section">
-            <div class="hero-content">
-                <div class="pill-badge">
-                    <i class="fa-solid fa-bolt"></i> Tải Video Đa Nền Tảng Không Giới Hạn
-                </div>
-                <h1 class="hero-title">
-                    Tải Video từ <span class="gradient-text">Facebook, TikTok, Instagram, YouTube</span>
-                </h1>
-                <p class="hero-desc">
-                    Hỗ trợ chất lượng cao nhất 1080p, 2K, 4K, chuyển đổi MP3 âm thanh cực nét, xóa logo TikTok hoàn toàn miễn phí.
-                </p>
+      <!-- Live Search Bar (Desktop) -->
+      <div class="hidden md:flex flex-1 max-w-md relative mx-4">
+        <div class="relative w-full">
+          <input type="text" id="search-input" placeholder="Tìm kiếm MacBook, iPhone, AirPods, bàn phím..." 
+            class="w-full pl-10 pr-10 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all text-slate-800 dark:text-slate-100 placeholder-slate-400">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+          <button id="clear-search-btn" class="hidden absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+      </div>
 
-                <!-- Search / Input Card -->
-                <div class="downloader-card">
-                    <form id="downloadForm" class="input-form">
-                        <div class="input-wrapper">
-                            <div class="platform-icon-wrap" id="platformIconWrap">
-                                <i class="fa-solid fa-link" id="detectedIcon"></i>
-                            </div>
-                            <input 
-                                type="text" 
-                                id="urlInput" 
-                                class="url-input" 
-                                placeholder="Dán link Facebook, TikTok, Instagram, YouTube tại đây..." 
-                                autocomplete="off"
-                                spellcheck="false"
-                                required
-                            >
-                            <button type="button" id="pasteBtn" class="btn-paste" title="Dán từ Clipboard">
-                                <i class="fa-regular fa-clipboard"></i>
-                                <span>Dán</span>
-                            </button>
-                            <button type="button" id="clearBtn" class="btn-clear hidden" title="Xóa link">
-                                <i class="fa-solid fa-xmark"></i>
-                            </button>
-                        </div>
-                        <button type="submit" id="submitBtn" class="btn-submit">
-                            <span class="btn-text">Tải Ngay</span>
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </button>
-                    </form>
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Video Downloader Quick Link Button -->
+        <a href="/downloader" class="hidden lg:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition-all shadow-sm">
+          <i class="fa-solid fa-cloud-arrow-down text-purple-600 dark:text-purple-400"></i>
+          <span>Tải Video Pro</span>
+        </a>
 
-                    <!-- Platform Chips -->
-                    <div class="platform-chips">
-                        <span class="chips-label">Hỗ trợ:</span>
-                        <div class="chips-list">
-                            <button class="chip" data-example="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
-                                <i class="fa-brands fa-youtube" style="color: #ff0000;"></i> YouTube
-                            </button>
-                            <button class="chip" data-example="https://www.tiktok.com">
-                                <i class="fa-brands fa-tiktok" style="color: #00f2fe;"></i> TikTok (No Logo)
-                            </button>
-                            <button class="chip" data-example="https://www.facebook.com">
-                                <i class="fa-brands fa-facebook" style="color: #1877f2;"></i> Facebook
-                            </button>
-                            <button class="chip" data-example="https://www.instagram.com">
-                                <i class="fa-brands fa-instagram" style="color: #e1306c;"></i> Instagram Reels
-                            </button>
-                            <button class="chip" data-example="https://twitter.com">
-                                <i class="fa-brands fa-x-twitter" style="color: #ffffff;"></i> Twitter / X
-                            </button>
-                            <button class="chip" data-example="https://threads.net">
-                                <i class="fa-brands fa-threads" style="color: #aaaaaa;"></i> Threads
-                            </button>
-                            <button class="chip" data-example="https://reddit.com">
-                                <i class="fa-brands fa-reddit" style="color: #ff4500;"></i> Reddit
-                            </button>
-                        </div>
-                    </div>
-                </div>
+        <!-- Dark/Light Mode Toggle -->
+        <button id="theme-toggle" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="Đổi giao diện Sáng/Tối">
+          <i class="fa-solid fa-moon dark:hidden text-lg"></i>
+          <i class="fa-solid fa-sun hidden dark:block text-lg text-amber-400"></i>
+        </button>
 
-                <!-- Loader Box -->
-                <div id="loaderBox" class="loader-box hidden">
-                    <div class="spinner-ring"></div>
-                    <div class="loader-text-wrap">
-                        <p class="loader-title">Đang phân tích liên kết...</p>
-                        <p class="loader-subtitle">Đang truy xuất thông tin định dạng và chất lượng video tốt nhất</p>
-                    </div>
-                </div>
-
-                <!-- Error Notice -->
-                <div id="errorBox" class="error-box hidden">
-                    <div class="error-icon">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                    </div>
-                    <div class="error-content">
-                        <h4 class="error-title">Không thể tải video</h4>
-                        <p id="errorMessage" class="error-message">Vui lòng kiểm tra lại đường dẫn.</p>
-                    </div>
-                    <button type="button" id="dismissErrorBtn" class="btn-dismiss">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
-
-                <!-- Result Card -->
-                <div id="resultCard" class="result-card hidden">
-                    <div class="result-grid">
-                        <!-- Preview Column -->
-                        <div class="preview-col">
-                            <div class="thumbnail-wrapper">
-                                <img id="videoThumb" src="" alt="Thumbnail Video" class="video-thumbnail">
-                                <span id="videoDuration" class="duration-badge">00:00</span>
-                                <div class="platform-badge" id="videoPlatformBadge">
-                                    <i id="videoPlatformIcon" class="fa-brands fa-youtube"></i>
-                                    <span id="videoPlatformName">YouTube</span>
-                                </div>
-                            </div>
-                            <div class="video-meta">
-                                <h3 id="videoTitle" class="video-title">Tiêu đề video</h3>
-                                <div class="meta-row">
-                                    <span class="meta-item"><i class="fa-solid fa-user"></i> <span id="videoUploader">Tác giả</span></span>
-                                    <span class="meta-item" id="viewsContainer"><i class="fa-solid fa-eye"></i> <span id="videoViews">0 lượt xem</span></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Formats Options Column -->
-                        <div class="options-col">
-                            <div class="options-header">
-                                <h3>Chọn định dạng tải về</h3>
-                                <span class="badge-direct"><i class="fa-solid fa-shield-halved"></i> Tải trực tiếp</span>
-                            </div>
-
-                            <!-- Tabs for Video and Audio -->
-                            <div class="format-tabs">
-                                <button class="tab-btn active" data-tab="video">
-                                    <i class="fa-solid fa-video"></i> Video (MP4)
-                                </button>
-                                <button class="tab-btn" data-tab="audio">
-                                    <i class="fa-solid fa-music"></i> Âm Thanh (MP3/M4A)
-                                </button>
-                            </div>
-
-                            <!-- Video Formats List -->
-                            <div id="videoFormatsList" class="formats-list active">
-                                <!-- Populated dynamically -->
-                            </div>
-
-                            <!-- Audio Formats List -->
-                            <div id="audioFormatsList" class="formats-list">
-                                <!-- Populated dynamically -->
-                            </div>
-
-                            <!-- Downloading state banner -->
-                            <div id="downloadingState" class="downloading-banner hidden">
-                                <div class="mini-spinner"></div>
-                                <span>Đang khởi tạo tải xuống từ máy chủ... Vui lòng đợi trong giây lát!</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Download History -->
-                <div class="history-section" id="historySection">
-                    <div class="section-header">
-                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Tải Gần Đây</h3>
-                        <button id="clearHistoryBtn" class="btn-link">Xóa lịch sử</button>
-                    </div>
-                    <div id="historyList" class="history-grid">
-                        <div class="empty-history">
-                            <i class="fa-regular fa-folder-open"></i>
-                            <p>Chưa có video nào trong lịch sử tải</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Features Grid -->
-                <div class="features-section">
-                    <div class="feature-card">
-                        <div class="feature-icon icon-lightning"><i class="fa-solid fa-bolt-lightning"></i></div>
-                        <h4>Tốc Độ Cao</h4>
-                        <p>Xử lý phân tích đa luồng, tải trực tiếp từ máy chủ không qua quảng cáo rút gọn.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon icon-video"><i class="fa-solid fa-film"></i></div>
-                        <h4>Độ Phân Giải Cao</h4>
-                        <p>Hỗ trợ Full HD 1080p, 2K, 4K, 60fps với chất lượng hình ảnh và âm thanh nguyên bản.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon icon-tiktok"><i class="fa-brands fa-tiktok"></i></div>
-                        <h4>Xóa Logo TikTok</h4>
-                        <p>Tải video TikTok và Douyin không có hình mờ (watermark) nhanh chóng.</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon icon-shield"><i class="fa-solid fa-shield-halved"></i></div>
-                        <h4>An Toàn 100%</h4>
-                        <p>Bảo mật tuyệt đối, không thu thập thông tin người dùng, không cần đăng ký tài khoản.</p>
-                    </div>
-                </div>
-
-                <!-- FAQ Section -->
-                <div class="faq-section">
-                    <h2 class="section-title">Câu Hỏi Thường Gặp (FAQ)</h2>
-                    <div class="faq-accordion">
-                        <details class="faq-item">
-                            <summary class="faq-question">
-                                <span>Làm thế nào để lấy link video từ Facebook hoặc TikTok?</span>
-                                <i class="fa-solid fa-chevron-down"></i>
-                            </summary>
-                            <div class="faq-answer">
-                                <p>Trên điện thoại: Mở video trong app Facebook/TikTok > bấm nút <strong>Chia sẻ (Share)</strong> > chọn <strong>Sao chép liên kết (Copy Link)</strong>. Sau đó dán vào thanh tìm kiếm ở trên và bấm "Tải Ngay".</p>
-                            </div>
-                        </details>
-
-                        <details class="faq-item">
-                            <summary class="faq-question">
-                                <span>Video tải về nằm ở đâu trên máy tính/điện thoại?</span>
-                                <i class="fa-solid fa-chevron-down"></i>
-                            </summary>
-                            <div class="faq-answer">
-                                <p>Tất cả các tập tin tải về mặc định sẽ nằm trong thư mục <strong>Downloads (Tải về)</strong> trên máy tính hoặc bộ sưu tập / ứng dụng Tệp trên điện thoại.</p>
-                            </div>
-                        </details>
-
-                        <details class="faq-item">
-                            <summary class="faq-question">
-                                <span>Tôi có thể tách nhạc MP3 từ video YouTube không?</span>
-                                <i class="fa-solid fa-chevron-down"></i>
-                            </summary>
-                            <div class="faq-answer">
-                                <p>Có! Sau khi dán link và phân tích, chuyển sang tab <strong>Âm Thanh (MP3/M4A)</strong> và bấm tải định dạng MP3 192k để lưu file nhạc.</p>
-                            </div>
-                        </details>
-
-                        <details class="faq-item">
-                            <summary class="faq-question">
-                                <span>Cách khởi động máy chủ tải video offline trên máy tính?</span>
-                                <i class="fa-solid fa-chevron-down"></i>
-                            </summary>
-                            <div class="faq-answer">
-                                <p>Bạn chỉ cần nhấp đúp chuột vào file <code>start.bat</code> trong thư mục dự án, hệ thống sẽ tự động bật máy chủ Python FastAPI và mở trình duyệt tại địa chỉ <code>http://localhost:8000</code>.</p>
-                            </div>
-                        </details>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="app-footer">
-            <div class="footer-content">
-                <p>© 2026 <strong>AnyVideoPro</strong>. Dự án mã nguồn mở hỗ trợ tải video đa nền tảng.</p>
-                <div class="footer-links">
-                    <span class="footer-tag"><i class="fa-solid fa-code"></i> Python FastAPI & yt-dlp</span>
-                    <span class="footer-tag"><i class="fa-brands fa-github"></i> github.com/thanchet754/saitama</span>
-                </div>
-            </div>
-        </footer>
+        <!-- Cart Button -->
+        <button id="open-cart-btn" class="relative flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-500/20 active:scale-95 transition-all">
+          <i class="fa-solid fa-cart-shopping text-base"></i>
+          <span class="hidden sm:inline text-sm">Giỏ hàng</span>
+          <span id="cart-badge" class="min-w-[20px] h-5 px-1 rounded-full bg-amber-400 text-slate-900 text-xs font-bold flex items-center justify-center">0</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast hidden">
-        <i id="toastIcon" class="fa-solid fa-circle-check"></i>
-        <span id="toastMsg">Thông báo</span>
+    <!-- Mobile Search Bar -->
+    <div class="md:hidden px-4 pb-3">
+      <div class="relative w-full">
+        <input type="text" id="mobile-search-input" placeholder="Tìm sản phẩm theo tên..." 
+          class="w-full pl-10 pr-10 py-2 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-100">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="relative overflow-hidden hero-glow border-b border-slate-200 dark:border-slate-800/60 py-10 sm:py-14">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        
+        <div class="lg:col-span-7 space-y-5 text-center lg:text-left">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 text-blue-700 dark:text-blue-300 text-xs font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Hệ Thống Dữ Liệu Supabase Realtime • 110+ Sản Phẩm</span>
+          </div>
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+            Nâng Tầm Công Nghệ <br>
+            <span class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Trải Nghiệm Đẳng Cấp</span>
+          </h1>
+          <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base max-w-xl mx-auto lg:mx-0">
+            Khám phá những thiết bị công nghệ mới nhất từ Apple, Logitech, Keychron... Bảo hành chính hãng, miễn phí vận chuyển toàn quốc và hỗ trợ thanh toán VietQR tức thì.
+          </p>
+
+          <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+            <a href="#product-section" class="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-500/25 transition-all flex items-center gap-2">
+              <span>Xem Sản Phẩm</span>
+              <i class="fa-solid fa-arrow-down text-sm"></i>
+            </a>
+            <div class="flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-emerald-500"></i> Chính hãng 100%</span>
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-truck-fast text-blue-500"></i> Giao siêu tốc</span>
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-qrcode text-purple-500"></i> VietQR 24/7</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Feature Badges -->
+        <div class="lg:col-span-5 grid grid-cols-2 gap-4">
+          <div class="p-4 rounded-2xl glass-card shadow-sm hover:border-blue-400 transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg mb-3">
+              <i class="fa-solid fa-laptop"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Laptop & Mac</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">M3 Series, Ultrabook hiệu năng cao</p>
+          </div>
+
+          <div class="p-4 rounded-2xl glass-card shadow-sm hover:border-indigo-400 transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg mb-3">
+              <i class="fa-solid fa-mobile-screen"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Điện Thoại</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">iPhone, Flagship chính hãng</p>
+          </div>
+
+          <div class="p-4 rounded-2xl glass-card shadow-sm hover:border-purple-400 transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg mb-3">
+              <i class="fa-solid fa-headphones"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Phụ Kiện Cao Cấp</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">AirPods, Logitech, Keychron</p>
+          </div>
+
+          <div class="p-4 rounded-2xl glass-card shadow-sm hover:border-emerald-400 transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg mb-3">
+              <i class="fa-solid fa-clock"></i>
+            </div>
+            <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">Smartwatch</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Apple Watch, theo dõi sức khỏe</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Store Section -->
+  <main id="product-section" class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+    
+    <!-- Category Filter Tabs -->
+    <div class="mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-layer-group text-blue-600"></i>
+          <span>Danh Mục Sản Phẩm</span>
+        </h2>
+        <span id="product-count-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+          Đang tải...
+        </span>
+      </div>
+
+      <!-- Categories Pills Scrollable -->
+      <div id="category-pills" class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <!-- Rendered dynamically -->
+        <button class="category-btn active px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap bg-blue-600 text-white shadow-sm transition-all" data-category="all">
+          <i class="fa-solid fa-border-all mr-1.5"></i> Tất cả
+        </button>
+      </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- Filter & Sort Toolbar -->
+    <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl glass-card mb-8">
+      
+      <!-- Left: Filter chips -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Price Range Filter -->
+        <div class="flex items-center gap-2">
+          <label for="price-filter" class="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <i class="fa-solid fa-filter"></i> Giá:
+          </label>
+          <select id="price-filter" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200">
+            <option value="all">Tất cả mức giá</option>
+            <option value="under-5m">Dưới 5 triệu</option>
+            <option value="5m-15m">5 triệu - 15 triệu</option>
+            <option value="15m-30m">15 triệu - 30 triệu</option>
+            <option value="above-30m">Trên 30 triệu</option>
+          </select>
+        </div>
+
+        <!-- Stock Filter -->
+        <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer select-none text-slate-600 dark:text-slate-300">
+          <input type="checkbox" id="in-stock-only" class="rounded text-blue-600 focus:ring-blue-500 dark:bg-slate-800">
+          <span>Chỉ còn hàng</span>
+        </label>
+      </div>
+
+      <!-- Right: Sort options & View toggle -->
+      <div class="flex items-center gap-3">
+        <label for="sort-select" class="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+          <i class="fa-solid fa-arrow-down-wide-short"></i> Sắp xếp:
+        </label>
+        <select id="sort-select" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200">
+          <option value="default">Mới nhất</option>
+          <option value="price-asc">Giá tăng dần</option>
+          <option value="price-desc">Giá giảm dần</option>
+          <option value="name-asc">Tên A-Z</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <!-- Skeletons rendered initially -->
+      <div class="skeleton rounded-2xl h-80"></div>
+      <div class="skeleton rounded-2xl h-80"></div>
+      <div class="skeleton rounded-2xl h-80"></div>
+      <div class="skeleton rounded-2xl h-80"></div>
+    </div>
+
+    <!-- Empty State (Hidden by default) -->
+    <div id="empty-state" class="hidden text-center py-16 space-y-4">
+      <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400 text-2xl">
+        <i class="fa-solid fa-box-open"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 dark:text-slate-200">Không tìm thấy sản phẩm nào!</h3>
+      <p class="text-sm text-slate-500 max-w-sm mx-auto">Vui lòng thử tìm kiếm với từ khóa khác hoặc điều chỉnh lại bộ lọc mức giá.</p>
+      <button id="reset-filter-btn" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors">
+        Đặt lại bộ lọc
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Cart Drawer (Slide-Over from Right) -->
+  <div id="cart-drawer-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 modal-backdrop flex justify-end">
+    <div id="cart-drawer" class="drawer w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
+      
+      <!-- Drawer Header -->
+      <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 flex items-center justify-center font-bold">
+            <i class="fa-solid fa-bag-shopping"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-slate-900 dark:text-white">Giỏ Hàng</h3>
+            <p id="drawer-item-count" class="text-xs text-slate-500">0 sản phẩm</p>
+          </div>
+        </div>
+        <button id="close-cart-btn" class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Drawer Items List -->
+      <div id="cart-items-container" class="flex-1 overflow-y-auto p-5 space-y-4">
+        <!-- Rendered by JavaScript -->
+        <div class="text-center py-12 text-slate-400 space-y-3">
+          <i class="fa-solid fa-cart-shopping text-4xl"></i>
+          <p class="text-sm font-medium">Giỏ hàng đang trống</p>
+        </div>
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="p-5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 space-y-4">
+        
+        <!-- Coupon input -->
+        <div class="flex gap-2">
+          <input type="text" id="coupon-input" placeholder="Mã giảm giá (ví dụ: TECHPRO)" class="flex-1 px-3 py-2 text-xs uppercase rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button id="apply-coupon-btn" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-xs font-semibold transition-colors">
+            Áp dụng
+          </button>
+        </div>
+
+        <!-- Price breakdown -->
+        <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+          <div class="flex justify-between">
+            <span>Tạm tính:</span>
+            <span id="cart-subtotal" class="font-semibold text-slate-800 dark:text-slate-100">0 ₫</span>
+          </div>
+          <div id="discount-row" class="hidden flex justify-between text-emerald-600 dark:text-emerald-400">
+            <span>Giảm giá (<span id="discount-name"></span>):</span>
+            <span id="cart-discount">-0 ₫</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Phí vận chuyển:</span>
+            <span class="text-emerald-600 font-semibold">Miễn phí toàn quốc</span>
+          </div>
+          <div class="flex justify-between text-sm font-bold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-700">
+            <span>Tổng cộng:</span>
+            <span id="cart-total" class="text-blue-600 dark:text-blue-400 text-base">0 ₫</span>
+          </div>
+        </div>
+
+        <button id="checkout-btn" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
+          <span>Tiến Hành Đặt Hàng</span>
+          <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Product Detail Modal -->
+  <div id="product-modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[90vh] flex flex-col">
+      
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+        <span id="modal-category-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">Danh mục</span>
+        <button id="close-product-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          <div class="bg-slate-100 dark:bg-slate-800/60 rounded-2xl p-4 flex items-center justify-center h-64 overflow-hidden">
+            <img id="modal-product-img" src="" alt="Product" class="max-h-full object-contain hover:scale-105 transition-transform duration-300">
+          </div>
+          <div class="space-y-3">
+            <h2 id="modal-product-name" class="text-xl font-bold text-slate-900 dark:text-white leading-snug"></h2>
+            <div class="flex items-center gap-2 text-xs text-amber-500">
+              <span id="modal-rating-stars">★★★★★</span>
+              <span id="modal-rating-text" class="text-slate-500 dark:text-slate-400"></span>
+            </div>
+            <div id="modal-product-price" class="text-2xl font-extrabold text-blue-600 dark:text-blue-400"></div>
+            <div id="modal-stock-badge" class="text-xs font-semibold"></div>
+            <p id="modal-product-desc" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed"></p>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200 dark:border-slate-800 pt-4 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold text-slate-500">Số lượng:</span>
+            <div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-800">
+              <button id="modal-qty-minus" class="px-3 py-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold">-</button>
+              <span id="modal-qty-val" class="px-3 py-1.5 font-bold text-sm min-w-[32px] text-center">1</span>
+              <button id="modal-qty-plus" class="px-3 py-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold">+</button>
+            </div>
+          </div>
+          <button id="modal-add-to-cart-btn" class="flex-1 py-3 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-2">
+            <i class="fa-solid fa-cart-plus"></i>
+            <span>Thêm Vào Giỏ</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Checkout & VietQR Modal -->
+  <div id="checkout-modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 max-h-[92vh] flex flex-col">
+      
+      <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+        <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-credit-card text-blue-600"></i>
+          <span>Thanh Toán Đơn Hàng</span>
+        </h3>
+        <button id="close-checkout-modal-btn" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5">
+        
+        <!-- Step 1: Customer Info -->
+        <div class="space-y-3">
+          <h4 class="text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">1. Thông Tin Nhận Hàng</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Họ và tên *</label>
+              <input type="text" id="cust-name" required placeholder="Nguyễn Văn A" class="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Số điện thoại *</label>
+              <input type="tel" id="cust-phone" required placeholder="0987654321" class="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Địa chỉ nhận hàng *</label>
+            <input type="text" id="cust-address" required placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" class="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <!-- Step 2: Payment Method Selection -->
+        <div class="space-y-3 pt-2">
+          <h4 class="text-xs uppercase tracking-wider font-bold text-slate-500 dark:text-slate-400">2. Phương Thức Thanh Toán</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            
+            <label class="relative flex items-center p-3.5 rounded-xl border-2 cursor-pointer transition-all border-blue-600 bg-blue-50/50 dark:bg-blue-950/20" id="method-qr-label">
+              <input type="radio" name="payment-method" value="vietqr" checked class="hidden" id="method-qr">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-qrcode"></i>
+                </div>
+                <div>
+                  <p class="font-bold text-xs text-slate-900 dark:text-white">Chuyển Khoản VietQR</p>
+                  <p class="text-[10px] text-slate-500">Quét mã QR mọi ngân hàng</p>
+                </div>
+              </div>
+            </label>
+
+            <label class="relative flex items-center p-3.5 rounded-xl border-2 cursor-pointer transition-all border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40" id="method-cod-label">
+              <input type="radio" name="payment-method" value="cod" class="hidden" id="method-cod">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-truck"></i>
+                </div>
+                <div>
+                  <p class="font-bold text-xs text-slate-900 dark:text-white">Thanh Toán COD</p>
+                  <p class="text-[10px] text-slate-500">Tiền mặt khi nhận hàng</p>
+                </div>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- VietQR Box (Shown when VietQR is selected) -->
+        <div id="vietqr-box" class="p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/90 border border-blue-200 dark:border-blue-900/60 space-y-4">
+          <div class="flex flex-col sm:flex-row items-center gap-5">
+            <div class="p-2 bg-white rounded-xl shadow-md border border-slate-200 flex-shrink-0">
+              <img id="vietqr-image" src="" alt="Mã VietQR" class="w-40 h-40 object-contain">
+            </div>
+            <div class="space-y-2 text-xs text-slate-700 dark:text-slate-300 w-full">
+              <div class="font-bold text-sm text-blue-700 dark:text-blue-400">Quét mã để thanh toán tức thì</div>
+              <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-1">
+                <span>Ngân hàng:</span>
+                <span class="font-semibold text-slate-900 dark:text-white">MB Bank (Quân Đội)</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-1">
+                <span>Số tài khoản:</span>
+                <span class="font-bold text-blue-600 dark:text-blue-400">0389998888</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-1">
+                <span>Số tiền:</span>
+                <span id="qr-amount-text" class="font-extrabold text-emerald-600 text-sm">0 ₫</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Nội dung CK:</span>
+                <span id="qr-content-text" class="font-bold text-purple-600 uppercase">TECH1234</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Order Summary & Submit -->
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          <div class="flex justify-between text-base font-bold text-slate-900 dark:text-white">
+            <span>Tổng thanh toán:</span>
+            <span id="checkout-total-price" class="text-blue-600 dark:text-blue-400 text-lg">0 ₫</span>
+          </div>
+
+          <button id="confirm-order-btn" class="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check"></i>
+            <span>Xác Nhận Đặt Hàng</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Order Success Screen Modal -->
+  <div id="success-modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 modal-backdrop flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 text-center border border-slate-200 dark:border-slate-800 space-y-4">
+      <div class="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl mx-auto">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">Đặt Hàng Thành Công!</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Cảm ơn bạn đã mua sắm tại TechStore Pro. Đơn hàng của bạn đã được ghi nhận vào hệ thống và đang được xử lý.
+      </p>
+
+      <div class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs space-y-1 text-left">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Mã đơn hàng:</span>
+          <span id="success-order-id" class="font-bold text-blue-600">#TS-9999</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Tổng tiền:</span>
+          <span id="success-order-total" class="font-bold text-emerald-600">0 ₫</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Thanh toán:</span>
+          <span id="success-order-method" class="font-semibold text-slate-700 dark:text-slate-300">VietQR</span>
+        </div>
+      </div>
+
+      <button id="close-success-btn" class="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors">
+        Tiếp Tục Mua Sắm
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Footer -->
+  <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-10 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <span class="text-xl font-bold text-slate-900 dark:text-white">TechStore Pro</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Hệ thống bán lẻ thiết bị công nghệ chính hãng. Tích hợp cơ sở dữ liệu Supabase Realtime và cổng thanh toán chuẩn VietQR.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-sm text-slate-900 dark:text-white mb-3">Danh Mục Chính</h4>
+          <ul class="text-xs space-y-2 text-slate-500 dark:text-slate-400">
+            <li><a href="#product-section" class="hover:text-blue-600 transition-colors">Điện Thoại & Smartphone</a></li>
+            <li><a href="#product-section" class="hover:text-blue-600 transition-colors">Laptop & Macbook M3</a></li>
+            <li><a href="#product-section" class="hover:text-blue-600 transition-colors">Phụ Kiện & Tai Nghe</a></li>
+            <li><a href="#product-section" class="hover:text-blue-600 transition-colors">Đồng Hồ Thông Minh</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-sm text-slate-900 dark:text-white mb-3">Hỗ Trợ Khách Hàng</h4>
+          <ul class="text-xs space-y-2 text-slate-500 dark:text-slate-400">
+            <li>Hotline: <span class="font-semibold text-blue-600">1900 8888</span> (8h00 - 21h30)</li>
+            <li>Email: <span class="font-semibold">support@techstorepro.vn</span></li>
+            <li>Chính sách bảo hành 12 tháng 1 đổi 1</li>
+            <li>Chính sách vận chuyển miễn phí</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-sm text-slate-900 dark:text-white mb-3">Công Cụ Tiện Ích</h4>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+            Tải video chất lượng cao từ Facebook, TikTok, Instagram và YouTube hoàn toàn miễn phí:
+          </p>
+          <a href="/downloader" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-all">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+            <span>Mở Video Downloader Pro</span>
+          </a>
+        </div>
+
+      </div>
+
+      <div class="pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
+        <span>© 2026 TechStore Pro. Tất cả quyền được bảo lưu. Powered by Supabase & Vercel.</span>
+        <div class="flex items-center gap-4">
+          <i class="fa-brands fa-facebook text-base hover:text-blue-600 transition-colors cursor-pointer"></i>
+          <i class="fa-brands fa-youtube text-base hover:text-red-600 transition-colors cursor-pointer"></i>
+          <i class="fa-brands fa-tiktok text-base hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"></i>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="script.js"></script>
 </body>
 </html>

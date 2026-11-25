@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VideoDownloader Pro - Tải Video Facebook, TikTok, Instagram, YouTube</title>
+    <link rel="stylesheet" href="downloader.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="dark-theme">
+    <!-- Background Ambient Glow -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-cloud-arrow-down"></i>
+                </div>
+                <div class="brand-info">
+                    <span class="brand-name">AnyVideo<span class="gradient-text">Pro</span></span>
+                    <span class="brand-badge">v2.0</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <a href="/" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; font-size:12px; font-weight:600; color:#3b82f6; background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2);" title="Về cửa hàng TechStore">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Cửa Hàng TechStore</span>
+                </a>
+                <div id="serverStatus" class="status-indicator online">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Server Sẵn Sàng</span>
+                </div>
+                <button id="themeToggle" class="btn-icon" title="Chuyển chế độ sáng/tối">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Hero Section -->
+        <main class="hero-section">
+            <div class="hero-content">
+                <div class="pill-badge">
+                    <i class="fa-solid fa-bolt"></i> Tải Video Đa Nền Tảng Không Giới Hạn
+                </div>
+                <h1 class="hero-title">
+                    Tải Video từ <span class="gradient-text">Facebook, TikTok, Instagram, YouTube</span>
+                </h1>
+                <p class="hero-desc">
+                    Hỗ trợ chất lượng cao nhất 1080p, 2K, 4K, chuyển đổi MP3 âm thanh cực nét, xóa logo TikTok hoàn toàn miễn phí.
+                </p>
+
+                <!-- Search / Input Card -->
+                <div class="downloader-card">
+                    <form id="downloadForm" class="input-form">
+                        <div class="input-wrapper">
+                            <div class="platform-icon-wrap" id="platformIconWrap">
+                                <i class="fa-solid fa-link" id="detectedIcon"></i>
+                            </div>
+                            <input 
+                                type="text" 
+                                id="urlInput" 
+                                class="url-input" 
+                                placeholder="Dán link Facebook, TikTok, Instagram, YouTube tại đây..." 
+                                autocomplete="off"
+                                spellcheck="false"
+                                required
+                            >
+                            <button type="button" id="pasteBtn" class="btn-paste" title="Dán từ Clipboard">
+                                <i class="fa-regular fa-clipboard"></i>
+                                <span>Dán</span>
+                            </button>
+                            <button type="button" id="clearBtn" class="btn-clear hidden" title="Xóa link">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <button type="submit" id="submitBtn" class="btn-submit">
+                            <span class="btn-text">Tải Ngay</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </form>
+
+                    <!-- Platform Chips -->
+                    <div class="platform-chips">
+                        <span class="chips-label">Hỗ trợ:</span>
+                        <div class="chips-list">
+                            <button class="chip" data-example="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+                                <i class="fa-brands fa-youtube" style="color: #ff0000;"></i> YouTube
+                            </button>
+                            <button class="chip" data-example="https://www.tiktok.com">
+                                <i class="fa-brands fa-tiktok" style="color: #00f2fe;"></i> TikTok (No Logo)
+                            </button>
+                            <button class="chip" data-example="https://www.facebook.com">
+                                <i class="fa-brands fa-facebook" style="color: #1877f2;"></i> Facebook
+                            </button>
+                            <button class="chip" data-example="https://www.instagram.com">
+                                <i class="fa-brands fa-instagram" style="color: #e1306c;"></i> Instagram Reels
+                            </button>
+                            <button class="chip" data-example="https://twitter.com">
+                                <i class="fa-brands fa-x-twitter" style="color: #ffffff;"></i> Twitter / X
+                            </button>
+                            <button class="chip" data-example="https://threads.net">
+                                <i class="fa-brands fa-threads" style="color: #aaaaaa;"></i> Threads
+                            </button>
+                            <button class="chip" data-example="https://reddit.com">
+                                <i class="fa-brands fa-reddit" style="color: #ff4500;"></i> Reddit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loader Box -->
+                <div id="loaderBox" class="loader-box hidden">
+                    <div class="spinner-ring"></div>
+                    <div class="loader-text-wrap">
+                        <p class="loader-title">Đang phân tích liên kết...</p>
+                        <p class="loader-subtitle">Đang truy xuất thông tin định dạng và chất lượng video tốt nhất</p>
+                    </div>
+                </div>
+
+                <!-- Error Notice -->
+                <div id="errorBox" class="error-box hidden">
+                    <div class="error-icon">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="error-content">
+                        <h4 class="error-title">Không thể tải video</h4>
+                        <p id="errorMessage" class="error-message">Vui lòng kiểm tra lại đường dẫn.</p>
+                    </div>
+                    <button type="button" id="dismissErrorBtn" class="btn-dismiss">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Result Card -->
+                <div id="resultCard" class="result-card hidden">
+                    <div class="result-grid">
+                        <!-- Preview Column -->
+                        <div class="preview-col">
+                            <div class="thumbnail-wrapper">
+                                <img id="videoThumb" src="" alt="Thumbnail Video" class="video-thumbnail">
+                                <span id="videoDuration" class="duration-badge">00:00</span>
+                                <div class="platform-badge" id="videoPlatformBadge">
+                                    <i id="videoPlatformIcon" class="fa-brands fa-youtube"></i>
+                                    <span id="videoPlatformName">YouTube</span>
+                                </div>
+                            </div>
+                            <div class="video-meta">
+                                <h3 id="videoTitle" class="video-title">Tiêu đề video</h3>
+                                <div class="meta-row">
+                                    <span class="meta-item"><i class="fa-solid fa-user"></i> <span id="videoUploader">Tác giả</span></span>
+                                    <span class="meta-item" id="viewsContainer"><i class="fa-solid fa-eye"></i> <span id="videoViews">0 lượt xem</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formats Options Column -->
+                        <div class="options-col">
+                            <div class="options-header">
+                                <h3>Chọn định dạng tải về</h3>
+                                <span class="badge-direct"><i class="fa-solid fa-shield-halved"></i> Tải trực tiếp</span>
+                            </div>
+
+                            <!-- Tabs for Video and Audio -->
+                            <div class="format-tabs">
+                                <button class="tab-btn active" data-tab="video">
+                                    <i class="fa-solid fa-video"></i> Video (MP4)
+                                </button>
+                                <button class="tab-btn" data-tab="audio">
+                                    <i class="fa-solid fa-music"></i> Âm Thanh (MP3/M4A)
+                                </button>
+                            </div>
+
+                            <!-- Video Formats List -->
+                            <div id="videoFormatsList" class="formats-list active">
+                                <!-- Populated dynamically -->
+                            </div>
+
+                            <!-- Audio Formats List -->
+                            <div id="audioFormatsList" class="formats-list">
+                                <!-- Populated dynamically -->
+                            </div>
+
+                            <!-- Downloading state banner -->
+                            <div id="downloadingState" class="downloading-banner hidden">
+                                <div class="mini-spinner"></div>
+                                <span>Đang khởi tạo tải xuống từ máy chủ... Vui lòng đợi trong giây lát!</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download History -->
+                <div class="history-section" id="historySection">
+                    <div class="section-header">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch Sử Tải Gần Đây</h3>
+                        <button id="clearHistoryBtn" class="btn-link">Xóa lịch sử</button>
+                    </div>
+                    <div id="historyList" class="history-grid">
+                        <div class="empty-history">
+                            <i class="fa-regular fa-folder-open"></i>
+                            <p>Chưa có video nào trong lịch sử tải</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features Grid -->
+                <div class="features-section">
+                    <div class="feature-card">
+                        <div class="feature-icon icon-lightning"><i class="fa-solid fa-bolt-lightning"></i></div>
+                        <h4>Tốc Độ Cao</h4>
+                        <p>Xử lý phân tích đa luồng, tải trực tiếp từ máy chủ không qua quảng cáo rút gọn.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon icon-video"><i class="fa-solid fa-film"></i></div>
+                        <h4>Độ Phân Giải Cao</h4>
+                        <p>Hỗ trợ Full HD 1080p, 2K, 4K, 60fps với chất lượng hình ảnh và âm thanh nguyên bản.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon icon-tiktok"><i class="fa-brands fa-tiktok"></i></div>
+                        <h4>Xóa Logo TikTok</h4>
+                        <p>Tải video TikTok và Douyin không có hình mờ (watermark) nhanh chóng.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon icon-shield"><i class="fa-solid fa-shield-halved"></i></div>
+                        <h4>An Toàn 100%</h4>
+                        <p>Bảo mật tuyệt đối, không thu thập thông tin người dùng, không cần đăng ký tài khoản.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Section -->
+                <div class="faq-section">
+                    <h2 class="section-title">Câu Hỏi Thường Gặp (FAQ)</h2>
+                    <div class="faq-accordion">
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Làm thế nào để lấy link video từ Facebook hoặc TikTok?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Trên điện thoại: Mở video trong app Facebook/TikTok > bấm nút <strong>Chia sẻ (Share)</strong> > chọn <strong>Sao chép liên kết (Copy Link)</strong>. Sau đó dán vào thanh tìm kiếm ở trên và bấm "Tải Ngay".</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Video tải về nằm ở đâu trên máy tính/điện thoại?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Tất cả các tập tin tải về mặc định sẽ nằm trong thư mục <strong>Downloads (Tải về)</strong> trên máy tính hoặc bộ sưu tập / ứng dụng Tệp trên điện thoại.</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Tôi có thể tách nhạc MP3 từ video YouTube không?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Có! Sau khi dán link và phân tích, chuyển sang tab <strong>Âm Thanh (MP3/M4A)</strong> và bấm tải định dạng MP3 192k để lưu file nhạc.</p>
+                            </div>
+                        </details>
+
+                        <details class="faq-item">
+                            <summary class="faq-question">
+                                <span>Cách khởi động máy chủ tải video offline trên máy tính?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </summary>
+                            <div class="faq-answer">
+                                <p>Bạn chỉ cần nhấp đúp chuột vào file <code>start.bat</code> trong thư mục dự án, hệ thống sẽ tự động bật máy chủ Python FastAPI và mở trình duyệt tại địa chỉ <code>http://localhost:8000</code>.</p>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>© 2026 <strong>AnyVideoPro</strong>. Dự án mã nguồn mở hỗ trợ tải video đa nền tảng.</p>
+                <div class="footer-links">
+                    <span class="footer-tag"><i class="fa-solid fa-code"></i> Python FastAPI & yt-dlp</span>
+                    <span class="footer-tag"><i class="fa-brands fa-github"></i> github.com/thanchet754/saitama</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <i id="toastIcon" class="fa-solid fa-circle-check"></i>
+        <span id="toastMsg">Thông báo</span>
+    </div>
+
+    <script src="downloader.js"></script>
+</body>
+</html>

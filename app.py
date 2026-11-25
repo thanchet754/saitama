@@ -351,12 +351,48 @@ def download_video(
 # Serve static files from root directory
 workspace_dir = os.path.dirname(__file__)
 
+SUPABASE_URL = "https://lhsgdulyyssrcicwhdhs.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxoc2dkdWx5eXNzcmNpY3doZGhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNTgxMDYsImV4cCI6MjA5MjkzNDEwNn0.9cXMTwNBmoJHnyvRezP1qivatXEDT-b58nW82c9i_Ng"
+
+@app.get("/api/shop/products")
+def get_shop_products():
+    """Proxy endpoint to fetch all products from Supabase with categories & ratings"""
+    import urllib.request, json
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/products?select=*,categories(id,name,slug),product_ratings(avg_rating,review_count)&order=created_at.desc"
+        req = urllib.request.Request(url, headers={
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": f"Bearer {SUPABASE_ANON_KEY}"
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            products = json.loads(resp.read().decode("utf-8"))
+        
+        cat_url = f"{SUPABASE_URL}/rest/v1/categories?select=*&order=name.asc"
+        cat_req = urllib.request.Request(cat_url, headers={
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": f"Bearer {SUPABASE_ANON_KEY}"
+        })
+        with urllib.request.urlopen(cat_req, timeout=10) as resp:
+            categories = json.loads(resp.read().decode("utf-8"))
+
+        return {"products": products, "categories": categories}
+    except Exception as e:
+        return {"error": str(e), "products": [], "categories": []}
+
 @app.get("/")
+@app.get("/shop")
 def serve_index():
     index_path = os.path.join(workspace_dir, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return {"message": "Video Downloader API is running."}
+    return {"message": "TechStore Pro API is running."}
+
+@app.get("/downloader")
+def serve_downloader():
+    dl_path = os.path.join(workspace_dir, "downloader.html")
+    if os.path.exists(dl_path):
+        return FileResponse(dl_path)
+    return {"message": "Downloader page not found."}
 
 @app.get("/style.css")
 def serve_css():
@@ -365,6 +401,14 @@ def serve_css():
 @app.get("/script.js")
 def serve_js():
     return FileResponse(os.path.join(workspace_dir, "script.js"), media_type="application/javascript")
+
+@app.get("/downloader.css")
+def serve_downloader_css():
+    return FileResponse(os.path.join(workspace_dir, "downloader.css"), media_type="text/css")
+
+@app.get("/downloader.js")
+def serve_downloader_js():
+    return FileResponse(os.path.join(workspace_dir, "downloader.js"), media_type="application/javascript")
 
 if __name__ == "__main__":
     import uvicorn
